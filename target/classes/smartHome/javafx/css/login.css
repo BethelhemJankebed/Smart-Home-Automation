@@ -1,0 +1,57 @@
+.root {
+  -fx-background-color: #f4f6f9;
+}
+
+.card {
+  -fx-background-color: white;
+  -fx-padding: 36px;
+  -fx-spacing: 14px;
+  -fx-alignment: center;
+  -fx-background-radius: 16px;
+  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 20, 0.15, 0, 6);
+  -fx-min-width: 360px;
+}
+
+.title {
+  -fx-font-size: 22px;
+  -fx-font-weight: bold;
+}
+
+.subtitle {
+  -fx-text-fill: #6b7280; /* gray-500 */
+  -fx-padding: 0 0 8px 0;
+}
+
+.field-label {
+  -fx-font-size: 12px;
+  -fx-text-fill: #111827; /* gray-900 */
+}
+
+.input-row {
+  -fx-background-color: #f3f4f6; /* gray-100 */
+  -fx-padding: 10px 12px;
+  -fx-spacing: 8px;
+  -fx-background-radius: 10px;
+}
+
+.input-row .label {
+  -fx-text-fill: #6b7280;
+}
+
+.text-field, .password-field {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+}
+
+.primary-btn {
+  -fx-background-color: #0f172a; /* slate-900 */
+  -fx-text-fill: white;
+  -fx-padding: 10px 16px;
+  -fx-background-radius: 10px;
+  -fx-font-weight: bold;
+  -fx-min-width: 320px;
+}
+
+.message {
+  -fx-text-fill: #ef4444; /* red-500 */
+}

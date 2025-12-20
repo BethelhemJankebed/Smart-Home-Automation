@@ -9,6 +9,7 @@ import java.util.List;
 public class DatabaseManager {
 
     private static final String DB_URL = "jdbc:sqlite:users.db";
+    private static volatile String lastErrorMessage = null;
 
     static {
         createUsersTable();
@@ -32,6 +33,7 @@ public class DatabaseManager {
             stmt.execute(sql);
 
         } catch (SQLException e) {
+            lastErrorMessage = e.getMessage();
             e.printStackTrace();
         }
     }
@@ -39,16 +41,24 @@ public class DatabaseManager {
     public static boolean registerUser(String username, String password) {
         String sql = "INSERT INTO users(username, password) VALUES(?, ?)";
 
+        if (username == null || username.trim().isEmpty() ||
+            password == null || password.trim().isEmpty()) {
+            lastErrorMessage = "All fields are required";
+            return false;
+        }
+
         try (Connection conn = connect();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setString(1, username);
-            ps.setString(2, password);
+            ps.setString(1, username.trim());
+            ps.setString(2, password.trim());
             ps.executeUpdate();
             return true;
 
         } catch (SQLException e) {
-            return false; // username exists
+            lastErrorMessage = e.getMessage();
+            e.printStackTrace();
+            return false; // could be unique violation or other DB error
         }
     }
 
@@ -65,9 +75,14 @@ public class DatabaseManager {
             return rs.next();
 
         } catch (SQLException e) {
+            lastErrorMessage = e.getMessage();
             e.printStackTrace();
             return false;
         }
+    }
+
+    public static String getLastError() {
+        return lastErrorMessage;
     }
 
     // ===== ROOMS =====

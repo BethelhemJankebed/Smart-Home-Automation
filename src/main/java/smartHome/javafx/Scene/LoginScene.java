@@ -1,92 +1,113 @@
 package smartHome.javafx.Scene;
 
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
-import smartHome.db.DatabaseManager;
-import smartHome.javafx.Scene.*;;;
+import smartHome.javafx.Controllers.LoginController;
 
 public class LoginScene {
 
-    public static Scene create() {
+    public static Scene createScene() {
+
+        // Icon (blue circle with lock)
+        Circle circle = new Circle(28, Color.web("#2563eb"));
+        Label lock = new Label("🔒");
+        lock.setStyle("-fx-font-size: 40px; -fx-text-fill: white;");
+        StackPane icon = new StackPane(circle, lock);
 
         Label title = new Label("Smart Home System");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        title.getStyleClass().add("title");
 
-        Label subtitle = new Label("Sign in to continue");
-        subtitle.setStyle("-fx-text-fill: #6b7280;");
+        Label subtitle = new Label("Enter your credentials to access the control panel");
+        subtitle.getStyleClass().add("subtitle");
 
         TextField usernameField = new TextField();
-        usernameField.setPromptText("Username");
+        usernameField.setPromptText("");
+        usernameField.setPrefWidth(280);
+        Label userIcon = new Label("👤");
+        Label userInline = new Label("Username");
+        userInline.getStyleClass().add("inline-label");
+        HBox userRow = new HBox(8, userInline, userIcon, usernameField);
+        userRow.getStyleClass().add("input-row");
 
         PasswordField passwordField = new PasswordField();
-        passwordField.setPromptText("Password");
+        passwordField.setPromptText("");
+        passwordField.setPrefWidth(280);
+        Label passIcon = new Label("🔑");
+        Label passInline = new Label("Password");
+        passInline.getStyleClass().add("inline-label");
+        HBox passRow = new HBox(8, passInline, passIcon, passwordField);
+        passRow.getStyleClass().add("input-row");
+    userRow.setMaxWidth(320);
+    userRow.setAlignment(Pos.CENTER_LEFT);
 
-        Label errorLabel = new Label();
-        errorLabel.setTextFill(Color.web("#dc2626"));
+        Label messageLabel = new Label();
+        messageLabel.getStyleClass().add("message");
 
-        Button loginBtn = new Button("Login");
-        loginBtn.setPrefWidth(260);
-        loginBtn.setStyle("""
-            -fx-background-color: black;
-            -fx-text-fill: white;
-            -fx-font-weight: bold;
-            -fx-background-radius: 8;
-        """);
+            passRow.setMaxWidth(320);
+            passRow.setAlignment(Pos.CENTER_LEFT);
+        Button loginButton = new Button("Login");
+        loginButton.getStyleClass().add("primary-btn");
+            loginButton.setPrefWidth(320);
 
-        Button signupBtn = new Button("Don't have an account? Sign up");
-        signupBtn.setStyle("""
-            -fx-background-color: transparent;
-            -fx-text-fill: #2563eb;
-        """);
+            // Signup link
+            Label noAccount = new Label("Don't have an account?");
+            Hyperlink signupLink = new Hyperlink("Sign up");
+            signupLink.getStyleClass().add("link");
+            HBox signupRow = new HBox(6, noAccount, signupLink);
+            signupRow.getStyleClass().add("signup-row");
+            signupRow.setAlignment(Pos.CENTER);
 
-        loginBtn.setOnAction(e -> {
-            if (DatabaseManager.validateLogin(
-                    usernameField.getText(),
-                    passwordField.getText())) {
+        // Controller object
+        LoginController controller = new LoginController();
 
-                SceneManager.switchScene("Dashboard");
-            } else {
-                errorLabel.setText("Invalid username or password");
+        // Anonymous class + override (teacher requirement)
+        loginButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                controller.handleLogin(
+                        usernameField.getText(),
+                        passwordField.getText(),
+                        messageLabel
+                );
             }
         });
 
-        signupBtn.setOnAction(e ->
-                SceneManager.switchScene("Signup")
-        );
-
-        Circle circle = new Circle(30, Color.web("#2563eb"));
-        Label lock = new Label("🔒");
-        lock.setStyle("-fx-font-size: 44px; -fx-text-fill: white;");
-        StackPane icon = new StackPane(circle, lock);
-
+            signupLink.setOnAction(e -> SceneManager.switchScene("Signup"));
         VBox card = new VBox(14,
                 icon,
                 title,
                 subtitle,
-                usernameField,
-                passwordField,
-                errorLabel,
-                loginBtn,
-                signupBtn
+                userRow,
+                passRow,
+                loginButton,
+                signupRow,
+                messageLabel
         );
-
         card.setAlignment(Pos.CENTER);
-        card.setMaxWidth(320);
-        card.setStyle("""
-            -fx-background-color: white;
-            -fx-background-radius: 16;
-            -fx-padding: 30;
-            -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0, 0, 6);
-        """);
+        card.getStyleClass().add("card");
+            card.setMaxWidth(420);
 
         StackPane root = new StackPane(card);
-        root.setPrefSize(1000, 600);
+        root.getStyleClass().add("root");
 
-        return new Scene(root, 1000, 600);
+        Scene scene = new Scene(root, 1000, 600);
+        scene.getStylesheets().add(
+                LoginScene.class.getResource("/css/login.css").toExternalForm()
+        );
+
+        return scene;
+    }
+
+    // Compatibility alias expected by SceneManager
+    public static Scene create() {
+        return createScene();
     }
 }

@@ -2,7 +2,6 @@ package smartHome.javafx.Scene;
 
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import javafx.scene.Scene.*;
 
 public class SceneManager {
 
@@ -18,6 +17,8 @@ public class SceneManager {
         Scene scene = switch (name) {
             case "Login" -> LoginScene.create();
             case "Signup" -> SignupScene.create();
+            case "Dashboard" -> DashboardScene.create();
+            case "DashboardScene" -> DashboardScene.create();
             default -> throw new IllegalArgumentException("Unknown scene");
         };
 
