@@ -11,7 +11,7 @@ public class LoginController {
         try {
             if (DatabaseManager.validateLogin(username, password)) {
                 messageLabel.setText("Login successful");
-                SceneManager.switchScene("DashboardScene");
+                SceneManager.switchScene("Dashboard");
             } else {
                 messageLabel.setText("Invalid username or password");
             }

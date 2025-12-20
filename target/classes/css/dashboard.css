@@ -1,0 +1,57 @@
+.dashboard-root {
+  -fx-font-size: 13px;
+  -fx-background-color: linear-gradient(to bottom, #eef2ff, #ffffff);
+  -fx-padding: 18px;
+}
+
+.dashboard-header .button {
+  -fx-background-color: #f3f4f6;
+  -fx-background-radius: 8;
+}
+
+.card {
+  -fx-background-color: white;
+  -fx-background-radius: 16;
+  -fx-padding: 16px;
+  -fx-spacing: 10px;
+  -fx-pref-height: 320px;
+  -fx-max-height: 320px;
+  -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 20, 0.2, 0, 6);
+  -fx-cursor: hand;
+}
+
+.card:hover {
+  -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.18), 24, 0.25, 0, 8);
+}
+
+.card-title {
+  -fx-font-size: 16px;
+  -fx-font-weight: bold;
+}
+
+.card-subtitle {
+  -fx-text-fill: #6b7280;
+  -fx-font-size: 12px;
+}
+
+.icon-emoji {
+  -fx-font-size: 40px;
+}
+
+.icon-circle-pink {
+  -fx-fill: #ec4899;
+}
+.icon-circle-green {
+  -fx-fill: #22c55e;
+}
+.icon-circle-blue {
+  -fx-fill: #2563eb;
+}
+
+.icon-shield {
+  -fx-fill: white;
+}
+
+.card-icon {
+  -fx-padding: 10px 0 8px 0;
+}
