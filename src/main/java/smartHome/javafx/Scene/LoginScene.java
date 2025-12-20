@@ -1,24 +1,19 @@
 package smartHome.app.scenes;
 
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import smartHome.app.db.DatabaseManager;
-import smartHome.app.utils.SceneManager;
+import smartHome.app.controllers.LoginController;
 
 public class LoginScene {
 
-    public static Scene create() {
+    public static Scene createScene() {
 
-        Label title = new Label("Smart Home System");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
-
-        Label subtitle = new Label("Sign in to continue");
-        subtitle.setStyle("-fx-text-fill: #6b7280;");
+        Label title = new Label("Smart Home Login");
+        title.getStyleClass().add("title");
 
         TextField usernameField = new TextField();
         usernameField.setPromptText("Username");
@@ -26,67 +21,50 @@ public class LoginScene {
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Password");
 
-        Label errorLabel = new Label();
-        errorLabel.setTextFill(Color.web("#dc2626"));
+        Label messageLabel = new Label();
 
-        Button loginBtn = new Button("Login");
-        loginBtn.setPrefWidth(260);
-        loginBtn.setStyle("""
-            -fx-background-color: black;
-            -fx-text-fill: white;
-            -fx-font-weight: bold;
-            -fx-background-radius: 8;
-        """);
+        Button loginButton = new Button("Login");
+        Button clearButton = new Button("Clear");
 
-        Button signupBtn = new Button("Don't have an account? Sign up");
-        signupBtn.setStyle("""
-            -fx-background-color: transparent;
-            -fx-text-fill: #2563eb;
-        """);
+        // Controller object
+        LoginController controller = new LoginController();
 
-        loginBtn.setOnAction(e -> {
-            if (DatabaseManager.validateLogin(
-                    usernameField.getText(),
-                    passwordField.getText())) {
-
-                SceneManager.switchScene("Dashboard");
-            } else {
-                errorLabel.setText("Invalid username or password");
+        // ✅ Anonymous class + override (teacher requirement)
+        loginButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                controller.handleLogin(
+                        usernameField.getText(),
+                        passwordField.getText(),
+                        messageLabel
+                );
             }
         });
 
-        signupBtn.setOnAction(e ->
-                SceneManager.switchScene("Signup")
-        );
+        // ✅ Lambda expression
+        clearButton.setOnAction(e -> {
+            usernameField.clear();
+            passwordField.clear();
+            messageLabel.setText("");
+        });
 
-        Circle circle = new Circle(30, Color.web("#2563eb"));
-        Label lock = new Label("🔒");
-        lock.setStyle("-fx-font-size: 44px; -fx-text-fill: white;");
-        StackPane icon = new StackPane(circle, lock);
-
-        VBox card = new VBox(14,
-                icon,
+        VBox root = new VBox(10,
                 title,
-                subtitle,
                 usernameField,
                 passwordField,
-                errorLabel,
-                loginBtn,
-                signupBtn
+                loginButton,
+                clearButton,
+                messageLabel
         );
 
-        card.setAlignment(Pos.CENTER);
-        card.setMaxWidth(320);
-        card.setStyle("""
-            -fx-background-color: white;
-            -fx-background-radius: 16;
-            -fx-padding: 30;
-            -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0, 0, 6);
-        """);
+        root.setAlignment(Pos.CENTER);
+        root.getStyleClass().add("root");
 
-        StackPane root = new StackPane(card);
-        root.setPrefSize(1000, 600);
+        Scene scene = new Scene(root, 400, 300);
+        scene.getStylesheets().add(
+                LoginScene.class.getResource("./src/main/java/smartHome/javafx/Css/login.css").toExternalForm()
+        );
 
-        return new Scene(root, 1000, 600);
+        return scene;
     }
 }
