@@ -1,4 +1,4 @@
-package smartHome;
+package smartHome.app;
 
 import java.util.ArrayList;
 import java.util.Scanner;

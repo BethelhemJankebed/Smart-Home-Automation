@@ -1,11 +1,11 @@
-package smartHome.app.Controllers;
+package smartHome.javafx.Controllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
-import smartHome.app.db.DatabaseManager;
-import smartHome.app.utils.SceneManager;
+import smartHome.db.DatabaseManager;
+import smartHome.javafx.Scene.SceneManager;
 
 public class LoginController {
 

@@ -1,11 +1,11 @@
-package smartHome.app.Controllers;
+package smartHome.javafx.Controllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.fxml.FXMLLoader;
-import smartHome.app.utils.SceneManager;
+import smartHome.javafx.Scene.SceneManager;
 
 public class DashboardController {
 

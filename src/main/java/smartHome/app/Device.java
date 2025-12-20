@@ -1,4 +1,4 @@
-package smartHome;
+package smartHome.app;
 
 public abstract class Device {
     protected String name;

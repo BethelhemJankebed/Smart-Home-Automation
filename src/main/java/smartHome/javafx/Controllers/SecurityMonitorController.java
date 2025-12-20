@@ -1,4 +1,4 @@
-package smartHome.app.Controllers;
+package smartHome.javafx.Controllers;
 
 public class SecurityMonitorController {
 }

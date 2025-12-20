@@ -1,4 +1,4 @@
-package smartHome.app.scenes;
+package smartHome.javafx.Scene;
 
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -7,8 +7,8 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
-import smartHome.app.db.DatabaseManager;
-import smartHome.app.utils.SceneManager;
+import smartHome.db.DatabaseManager;
+import smartHome.javafx.*;
 
 public class SignupScene {
 

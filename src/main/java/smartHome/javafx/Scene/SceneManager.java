@@ -1,9 +1,8 @@
-package smartHome.app.utils;
+package smartHome.javafx.Scene;
 
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import smartHome.app.scenes.LoginScene;
-import smartHome.app.scenes.SignupScene;
+import javafx.scene.Scene.*;
 
 public class SceneManager {
 

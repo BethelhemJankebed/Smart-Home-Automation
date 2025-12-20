@@ -1,5 +1,4 @@
-package smartHome;
-
+package smartHome.app;
 import org.opencv.core.*;
 import org.opencv.core.Core;
 import org.opencv.dnn.Dnn;
@@ -9,7 +8,6 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.FaceDetectorYN;
 import org.opencv.objdetect.FaceRecognizerSF;
 import org.opencv.videoio.VideoCapture;
-import smartHome.app.Controllers.ChildMonitorController;
 import smartHome.app.Main;
 
 import java.io.File;

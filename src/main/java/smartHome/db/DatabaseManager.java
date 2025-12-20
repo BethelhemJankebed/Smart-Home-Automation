@@ -1,6 +1,6 @@
-package smartHome.app.db;
+package smartHome.db;
 
-import smartHome.Room;
+import smartHome.app.Room;
 
 import java.sql.*;
 import java.util.ArrayList;

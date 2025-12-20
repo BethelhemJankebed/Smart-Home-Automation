@@ -1,4 +1,4 @@
-package smartHome;
+package smartHome.app;
 
 public class User {
     private String name;

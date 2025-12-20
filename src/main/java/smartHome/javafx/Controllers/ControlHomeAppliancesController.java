@@ -1,10 +1,10 @@
-package smartHome.app.Controllers;
+package smartHome.javafx.Controllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.shape.Circle;
-import smartHome.app.utils.SceneManager;
+import smartHome.javafx.Scene.*;;;
 
 public class ControlHomeAppliancesController {
 

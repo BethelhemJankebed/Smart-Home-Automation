@@ -1,4 +1,4 @@
-package smartHome;
+package smartHome.app;
 
 public class Fan extends Device {
     public Fan(String name) { super(name); }
