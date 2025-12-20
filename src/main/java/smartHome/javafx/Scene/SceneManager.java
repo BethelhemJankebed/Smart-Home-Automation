@@ -14,15 +14,30 @@ public class SceneManager {
 
     public static void switchScene(String name) {
 
+        double w = stage.getWidth();
+        double h = stage.getHeight();
+
         Scene scene = switch (name) {
             case "Login" -> LoginScene.create();
             case "Signup" -> SignupScene.create();
             case "Dashboard" -> DashboardScene.create();
             case "DashboardScene" -> DashboardScene.create();
+            case "ChildMonitor" -> ChildMonitorScene.create();
+            case "Appliances" -> AppliancesScene.create();
+            case "Security" -> SecurityScene.create();
             default -> throw new IllegalArgumentException("Unknown scene");
         };
 
         stage.setScene(scene);
-        stage.show();
+        // Keep previous stage size across scenes
+        if (w > 0 && h > 0) {
+            stage.setWidth(w);
+            stage.setHeight(h);
+        }
+
+        if (!stage.isShowing()) {
+            stage.show();
+        }
+
     }
 }
