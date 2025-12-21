@@ -1,28 +1,27 @@
-package smartHome;
+package smartHome.app;
 
 public class Light extends Device {
 
     private boolean linkable = false;
-    private boolean isOn = false;
     private Camera linkedCamera;
 
-    public Light(String name) {
-        super(name);
+    public Light(String id, String name) {
+        super(id, name, "Light");
     }
 
     @Override
     public void turnOn() {
-        if (!isOn) {
+        if (!state) {
             System.out.println(name + " is ON");
-            isOn = true;
+            state = true;
         }
     }
 
     @Override
     public void turnOff() {
-        if (isOn) {
+        if (state) {
             System.out.println(name + " is OFF");
-            isOn = false;
+            state = false;
         }
     }
 
@@ -47,12 +46,10 @@ public class Light extends Device {
     public void linkCamera(Camera cam) {
         if (!linkable || cam == null) return;
         linkedCamera = cam;
-        cam.linkLight(this);
     }
 
     public void unlinkCamera() {
         if (linkedCamera != null) {
-            linkedCamera.unlinkLight(this);
             linkedCamera = null;
             System.out.println(name + " unlinked from camera");
         }

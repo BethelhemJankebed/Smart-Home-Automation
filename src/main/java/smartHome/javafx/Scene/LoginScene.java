@@ -1,4 +1,4 @@
-package smartHome.app.scenes;
+package smartHome.javafx.Scene;
 
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -6,11 +6,11 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
-import smartHome.app.controllers.LoginController;
+import smartHome.javafx.Controllers.LoginController;
 
 public class LoginScene {
 
-    public static Scene createScene() {
+    public static Scene create() {
 
         Label title = new Label("Smart Home Login");
         title.getStyleClass().add("title");
@@ -24,7 +24,7 @@ public class LoginScene {
         Label messageLabel = new Label();
 
         Button loginButton = new Button("Login");
-        Button clearButton = new Button("Clear");
+        Button signupButton = new Button("Sign Up");
 
         // Controller object
         LoginController controller = new LoginController();
@@ -42,18 +42,15 @@ public class LoginScene {
         });
 
         // ✅ Lambda expression
-        clearButton.setOnAction(e -> {
-            usernameField.clear();
-            passwordField.clear();
-            messageLabel.setText("");
-        });
+        signupButton.setOnAction(e -> SceneManager.switchScene("Signup"));
 
         VBox root = new VBox(10,
                 title,
                 usernameField,
                 passwordField,
                 loginButton,
-                clearButton,
+
+                signupButton,
                 messageLabel
         );
 
@@ -62,7 +59,7 @@ public class LoginScene {
 
         Scene scene = new Scene(root, 400, 300);
         scene.getStylesheets().add(
-                LoginScene.class.getResource("./src/main/java/smartHome/javafx/Css/login.css").toExternalForm()
+                LoginScene.class.getResource("/smartHome/javafx/Css/login.css").toExternalForm()
         );
 
         return scene;

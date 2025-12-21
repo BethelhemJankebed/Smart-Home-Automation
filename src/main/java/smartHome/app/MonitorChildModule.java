@@ -1,4 +1,4 @@
-package smartHome;
+package smartHome.app;
 
 import org.opencv.core.Mat;
 

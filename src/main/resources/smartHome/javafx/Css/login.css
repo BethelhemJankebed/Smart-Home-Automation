@@ -1,0 +1,13 @@
+.root {
+  -fx-background-color: #f4f4f4;
+}
+
+.title {
+  -fx-font-size: 18px;
+  -fx-font-weight: bold;
+}
+
+.button {
+  -fx-background-color: black;
+  -fx-text-fill: white;
+}

@@ -1,8 +1,8 @@
-package smartHome.app.controllers;
+package smartHome.javafx.Controllers;
 
 import javafx.scene.control.Label;
-import smartHome.app.db.DatabaseManager;
-import smartHome.app.utils.SceneManager;
+import smartHome.db.DatabaseManager;
+import smartHome.javafx.Scene.SceneManager;
 
 public class LoginController {
 
@@ -11,7 +11,7 @@ public class LoginController {
         try {
             if (DatabaseManager.validateLogin(username, password)) {
                 messageLabel.setText("Login successful");
-                SceneManager.switchToDashboard(); // future scene
+                SceneManager.switchScene("Dashboard"); // future scene
             } else {
                 messageLabel.setText("Invalid username or password");
             }

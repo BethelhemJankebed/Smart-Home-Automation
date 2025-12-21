@@ -1,4 +1,4 @@
-package smartHome;
+package smartHome.app;
 
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -6,11 +6,13 @@ import java.util.Scanner;
 public class ApplicationModule {
     private final Scanner sc = new Scanner(System.in);
     private ArrayList<Room> rooms = new ArrayList<>();
+    private int roomIdCounter = 1;
+    private int deviceIdCounter = 1;
 
     public void addRoom() {
         System.out.print("Enter room name: ");
         String roomName = sc.nextLine();
-        rooms.add(new Room(roomName));
+        rooms.add(new Room(roomIdCounter++, roomName));
         System.out.println("Room added!");
     }
 
@@ -40,11 +42,12 @@ public class ApplicationModule {
         String type = sc.nextLine();
         Device device = null;
 
+        String id = "D" + deviceIdCounter++;
         switch(type.toLowerCase()) {
-            case "light": device = new Light("Light"); break;
-            case "fan": device = new Fan("Fan"); break;
-            case "doorlock": device = new DoorLock("DoorLock"); break;
-            case "camera": device = new Camera("Camera", ""); break;
+            case "light": device = new Light(id, "Light"); break;
+            case "fan": device = new Fan(id, "Fan"); break;
+            case "doorlock": device = new DoorLock(id, "DoorLock"); break;
+            case "camera": device = new Camera(id, "Camera", selectedRoom); break;
             default: System.out.println("Invalid device type!"); return;
         }
 

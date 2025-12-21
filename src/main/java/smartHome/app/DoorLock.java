@@ -1,10 +1,22 @@
-package smartHome;
+package smartHome.app;
 
 public class DoorLock extends Device {
-    public DoorLock(String name) { super(name); }
+    public DoorLock(String id, String name) { 
+        super(id, name, "DoorLock"); 
+    }
 
     @Override
-    public void turnOn() { System.out.println(name + " is LOCKED"); }
+    public void turnOn() { 
+        if (!state) {
+            System.out.println(name + " is LOCKED"); 
+            state = true;
+        }
+    }
     @Override
-    public void turnOff() { System.out.println(name + " is UNLOCKED"); }
+    public void turnOff() { 
+        if (state) {
+            System.out.println(name + " is UNLOCKED"); 
+            state = false;
+        }
+    }
 }

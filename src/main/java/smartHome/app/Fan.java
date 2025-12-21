@@ -1,10 +1,22 @@
-package smartHome;
+package smartHome.app;
 
 public class Fan extends Device {
-    public Fan(String name) { super(name); }
+    public Fan(String id, String name) { 
+        super(id, name, "Fan"); 
+    }
 
     @Override
-    public void turnOn() { System.out.println(name + " is ON"); }
+    public void turnOn() { 
+        if (!state) {
+            System.out.println(name + " is SPINNING"); 
+            state = true;
+        }
+    }
     @Override
-    public void turnOff() { System.out.println(name + " is OFF"); }
+    public void turnOff() { 
+        if (state) {
+            System.out.println(name + " is OFF"); 
+            state = false;
+        }
+    }
 }

@@ -1,16 +1,15 @@
-package smartHome;
+package smartHome.app;
 
 import org.opencv.core.*;
 import org.opencv.core.Core;
-import org.opencv.dnn.Dnn;
-import org.opencv.dnn.Net;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.FaceDetectorYN;
 import org.opencv.objdetect.FaceRecognizerSF;
 import org.opencv.videoio.VideoCapture;
-import smartHome.app.Controllers.ChildMonitorController;
-import smartHome.app.Main;
+import org.opencv.videoio.Videoio;
+
+import smartHome.db.DatabaseManager;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -19,10 +18,10 @@ import java.util.List;
 
 public class Camera extends Device {
 
-    private boolean isRunning = false;
+    private volatile boolean isRunning = false;
     private VideoCapture VC;
 
-    private ArrayList<Light> linkedLights = new ArrayList<>();
+
 
     //models
     private final String faceModel = "src/main/resources/models/face_detection_yunet_2023mar.onnx";
@@ -31,8 +30,11 @@ public class Camera extends Device {
     private final HashMap<String, Mat> familyknownEmbeddings = new HashMap<>();
     private final HashMap<String, Mat> childknownEmbeddings = new HashMap<>();
 
-    public Camera(String name, String streamURL) {
-        super(name);
+    private Room linkedRoom;
+
+    public Camera(String id, String name, Room room) {
+        super(id, name, "Camera");
+        this.linkedRoom = room;
     }
 
     // ==========================================================
@@ -40,34 +42,52 @@ public class Camera extends Device {
     // ==========================================================
     @Override
     public void turnOn() {
-        System.load(new File("src/main/resources/libs/opencv_java4120.dll").getAbsolutePath());
-
-        VC = new VideoCapture(0);
-
-        System.out.println(name + " is ACTIVE");
-        isRunning = true;
-
-        loadKnownFaces();
-        StartMotionDetection();
-        startFaceRecognition();
+        try {
+            // Use OpenPNP to load the shared library automatically
+            nu.pattern.OpenCV.loadShared();
+            
+            // Try DSHOW backend first for Windows stability, fallback to default
+            VC = new VideoCapture(0, Videoio.CAP_DSHOW);
+            if (!VC.isOpened()) {
+                VC = new VideoCapture(0);
+            }
+            
+            if (!VC.isOpened()) {
+                System.out.println("Camera found but failed to open stream.");
+            } else {
+                // Set resolution to common standard to avoid MSMF errors
+                VC.set(Videoio.CAP_PROP_FRAME_WIDTH, 640);
+                VC.set(Videoio.CAP_PROP_FRAME_HEIGHT, 480);
+                
+                // Small delay to let camera initialize
+                Thread.sleep(500);
+                
+                System.out.println(name + " is ACTIVE");
+                isRunning = true;
+                loadKnownFaces();
+                StartMotionDetection();
+                startFaceRecognition();
+            }
+        } catch (Throwable e) {
+            System.out.println("⚠ Failed to initialize real Camera: " + e.getMessage());
+            System.out.println("Falling back to MOCK mode.");
+            // e.printStackTrace(); 
+        }
     }
 
     @Override
     public void turnOff() {
         System.out.println(name + " is INACTIVE");
         isRunning = false;
+        if (VC != null && VC.isOpened()) {
+            VC.release();
+        }
     }
 
     // ==========================================================
     // LINK LIGHT FOR MOTION SENSOR MODE
     // ==========================================================
-    public void linkLight(Light light) {
-        linkedLights.add(light);
-    }
 
-    public void unlinkLight(Light light) {
-        linkedLights.remove(light);
-    }
 
 
     // ==========================================================
@@ -139,6 +159,12 @@ public class Camera extends Device {
 
     }
 
+    private volatile Mat latestFrame;
+
+    public Mat getLatestFrame() {
+        return latestFrame;
+    }
+
     // MOTION SENSOR THREAD + AUTO LIGHT
 
     private void StartMotionDetection() {
@@ -162,9 +188,16 @@ public class Camera extends Device {
             long lastMotion = System.currentTimeMillis();
 
             while (isRunning) {
-                synchronized (VC) {
-                    if (!VC.read(frame) || frame.empty()) continue;
-                }
+                try {
+                    synchronized (VC) {
+                        if (VC == null || !VC.isOpened()) break;
+                        if (!VC.read(frame) || frame.empty()) {
+                            Thread.sleep(100);
+                            continue;
+                        }
+                        latestFrame = frame.clone(); 
+                    }
+                } catch (Exception e) { break; }
 
                 Imgproc.cvtColor(frame, gray, Imgproc.COLOR_BGR2GRAY);
                 Imgproc.GaussianBlur(gray, blur, new Size(21, 21), 0);
@@ -179,23 +212,44 @@ public class Camera extends Device {
                     lastMotion = System.currentTimeMillis();
                     System.out.println("⚠ Motion detected in: " + this.name + "!");
 
-                    if (!linkedLights.isEmpty())
-                        for (Light light: linkedLights){
-                            light.turnOn();
+                    if (linkedRoom != null) {
+                        for (Device device : linkedRoom.getDevices()) {
+                            if (device instanceof Light light && light.isLinked()) {
+                                light.turnOn();
+                            }
                         }
+                    }
+                    // Log event
+                    saveSnapshot(frame, "MOTION");
                 }
 
                 // Auto turn off after 30 sec
-                if (!linkedLights.isEmpty()) {
-                    long idle = System.currentTimeMillis() - lastMotion;
-                    if (idle > 30000) {
-                        for (Light light: linkedLights){
-                            light.turnOff();
+                long idle = System.currentTimeMillis() - lastMotion;
+                if (idle > 30000) {
+                     if (linkedRoom != null) {
+                        for (Device device : linkedRoom.getDevices()) {
+                            if (device instanceof Light light && light.isLinked()) {
+                                light.turnOff();
+                            }
                         }
                     }
                 }
+                
+                try { Thread.sleep(30); } catch (InterruptedException e) { break; }
             }
         }).start();
+    }
+
+    public void saveSnapshot(Mat frame, String type) {
+        String filename = "snapshot_" + System.currentTimeMillis() + ".jpg";
+        String path = "src/main/resources/snapshots/" + filename;
+        File dir = new File("src/main/resources/snapshots/");
+        if (!dir.exists()) dir.mkdirs();
+        
+        Imgcodecs.imwrite(path, frame);
+        // Log to DB
+        // DatabaseManager.logEvent(this.id, type, path); // Uncomment when DB is ready
+        System.out.println("Snapshot saved: " + path);
     }
 
 
@@ -265,9 +319,15 @@ public class Camera extends Device {
             System.out.println("Face recognition started...");
 
             while (isRunning) {
-                synchronized (VC) {
-                    if (!VC.read(frame) || frame.empty()) continue;
-                }
+                try {
+                    synchronized (VC) {
+                        if (VC == null || !VC.isOpened()) break;
+                        if (!VC.read(frame) || frame.empty()) {
+                            Thread.sleep(100);
+                            continue;
+                        }
+                    }
+                } catch (Exception e) { break; }
 
                 Mat frameClone = frame.clone(); // for dangerous object detection so that it gets the full image
 
@@ -296,9 +356,6 @@ public class Camera extends Device {
                 if (detections.rows() == 0) continue;
 
                 boolean childDetected = false;
-                boolean familyDetected = false;
-                String detectedPerson = null;
-
                 boolean unknownDetected = false;
 
                 for (int i = 0; i < detections.rows(); i++) {
@@ -345,10 +402,13 @@ public class Camera extends Device {
                     if (bestScore < 1.05) {
                         if ("CHILD".equals(bestGroup)) {
                             childDetected = true;
+                            if (linkedRoom != null) {
+                                DatabaseManager.updateLocation(bestMatch, linkedRoom.getId());
+                            }
                         } else {
-                            familyDetected = true;
                         }
-                        detectedPerson = bestMatch;
+                        // familyDetected = true;
+                        // detectedPerson = bestMatch;
                     } else {
                         unknownDetected = true;
                     }
@@ -366,7 +426,8 @@ public class Camera extends Device {
                 if (childDetected && dangerDetected) {
                    giveImgWarningToModule("Child",frameClone);
                 }
-
+                
+                try { Thread.sleep(50); } catch (InterruptedException e) { break; }
             }
 
         }).start();

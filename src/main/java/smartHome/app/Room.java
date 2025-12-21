@@ -1,14 +1,37 @@
-package smartHome;
+package smartHome.app;
+
+
 
 import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Room {
+    private int id;
     private String name;
+    private String icon;
     private ArrayList<Device> devices = new ArrayList<>();
 
-    public Room(String name) {
+    public Room(int id, String name, String icon) {
+        this.id = id;
         this.name = name;
+        this.icon = icon;
+    }
+
+    public Room(int id, String name) {
+        this(id, name, "🏠"); // Default icon
+    }
+
+    public String getIcon() {
+        return icon;
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+
+    public int getId() {
+        return id;
     }
 
     public String getName() {
