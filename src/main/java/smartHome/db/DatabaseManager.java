@@ -112,9 +112,18 @@ public class DatabaseManager {
                      "type TEXT," +
                      "name TEXT," +
                      "room_id INTEGER," +
-                     "state BOOLEAN" +
+                     "state BOOLEAN," +
+                     "source TEXT" +
                      ");";
-         try (Connection conn = connect(); Statement stmt = conn.createStatement()) { stmt.execute(sql); } catch (SQLException e) { e.printStackTrace(); }
+        try (Connection conn = connect(); Statement stmt = conn.createStatement()) { 
+            stmt.execute(sql);
+            // Migration: Add source column if table existed before
+            try {
+                stmt.execute("ALTER TABLE devices ADD COLUMN source TEXT;");
+            } catch (SQLException e) {
+                // Column probably already exists, ignore
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
     }
 
     private static void createEventsTable() {
@@ -249,13 +258,20 @@ public class DatabaseManager {
     }
 
     public static void addDevice(Device device, int roomId) {
-        String sql = "INSERT OR REPLACE INTO devices(id, type, name, room_id, state) VALUES(?,?,?,?,?)";
+        String sql = "INSERT OR REPLACE INTO devices(id, type, name, room_id, state, source) VALUES(?,?,?,?,?,?)";
         try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, device.getId());
             ps.setString(2, device.getType());
             ps.setString(3, device.getName());
             ps.setInt(4, roomId);
             ps.setBoolean(5, device.isOn());
+            
+            String source = null;
+            if (device instanceof Camera cam) {
+                source = cam.getStreamSource();
+            }
+            ps.setString(6, source);
+            
             ps.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
     }
@@ -272,15 +288,19 @@ public class DatabaseManager {
                 String name = rs.getString("name");
                 boolean state = rs.getBoolean("state"); // State is mostly runtime, but storing initial state? Or just restoring?
                 
+                String source = rs.getString("source");
+                
                 Device d = null;
                 switch(type) {
                     case "Light" -> d = new Light(id, name);
                     case "Fan" -> d = new Fan(id, name);
                     case "DoorLock" -> d = new DoorLock(id, name);
                     case "TV" -> d = new TV(id, name);
-                    case "Camera" -> d = new Camera(id, name, null); // Camera needs room, but creating cyclic dependency or need room obj.
-                    // Resolving camera room later or passing existing room object is better. 
-                    // But here we return list of devices.
+                    case "Camera" -> {
+                        Camera cam = new Camera(id, name, null);
+                        cam.setStreamSource(source);
+                        d = cam;
+                    }
                 }
                 if (d != null) {
                     if (state) d.turnOn(); // Logic to restore state

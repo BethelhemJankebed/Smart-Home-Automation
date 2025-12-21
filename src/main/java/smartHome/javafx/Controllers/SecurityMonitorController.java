@@ -20,12 +20,18 @@ import smartHome.javafx.Scene.SceneManager;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Optional;
+import javafx.stage.FileChooser;
 
 public class SecurityMonitorController {
 
     private VBox root;
     private ComboBox<Room> roomSelector;
+    private ComboBox<Camera> cameraSelector;
     private ImageView videoView;
     private Camera activeCamera;
     private AnimationTimer timer;
@@ -82,10 +88,24 @@ public class SecurityMonitorController {
         HBox.setHgrow(s1, Priority.ALWAYS);
 
         roomSelector = new ComboBox<>();
-        roomSelector.setPromptText("Select Camera...");
-        roomSelector.setPrefWidth(180);
+        roomSelector.setPromptText("Room...");
+        roomSelector.setPrefWidth(120);
         roomSelector.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 10; -fx-font-size: 11px;");
         
+        cameraSelector = new ComboBox<>();
+        cameraSelector.setPromptText("Camera...");
+        cameraSelector.setPrefWidth(120);
+        cameraSelector.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 10; -fx-font-size: 11px;");
+        cameraSelector.setOnAction(e -> {
+            Camera selected = cameraSelector.getValue();
+            if (selected != null && selected != activeCamera) {
+                if (activeCamera != null) activeCamera.turnOff();
+                activeCamera = selected;
+                activeCamera.setLinkedRoom(roomSelector.getValue());
+                activeCamera.turnOn();
+            }
+        });
+
         List<Room> rooms = DatabaseManager.getAllRooms();
         roomSelector.getItems().addAll(rooms);
         roomSelector.setOnAction(e -> {
@@ -95,13 +115,13 @@ public class SecurityMonitorController {
                 switchCameraToRoom(selected);
             }
         });
-
+ 
         if (!rooms.isEmpty()) {
             roomSelector.setValue(rooms.get(0));
             switchCameraToRoom(rooms.get(0));
         }
 
-        feedHeader.getChildren().addAll(liveIndicator, feedLabel, s1, roomSelector);
+        feedHeader.getChildren().addAll(liveIndicator, feedLabel, s1, cameraSelector, roomSelector);
         
         videoView = new ImageView();
         videoView.setFitWidth(550);
@@ -150,6 +170,28 @@ public class SecurityMonitorController {
     }
 
     private void handleRegisterFace() {
+        Alert choice = new Alert(Alert.AlertType.CONFIRMATION);
+        choice.setTitle("Register Face");
+        choice.setHeaderText("Registration Source");
+        choice.setContentText("Would you like to capture the current camera frame or upload a photo from your computer?");
+
+        ButtonType capBtn = new ButtonType("Capture Feed");
+        ButtonType upBtn = new ButtonType("Upload File");
+        ButtonType cancelBtn = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        choice.getButtonTypes().setAll(capBtn, upBtn, cancelBtn);
+
+        Optional<ButtonType> result = choice.showAndWait();
+        if (result.isPresent()) {
+            if (result.get() == capBtn) {
+                registerFromCamera();
+            } else if (result.get() == upBtn) {
+                registerFromUpload();
+            }
+        }
+    }
+
+    private void registerFromCamera() {
         if (activeCamera == null) {
             showAlert("No Camera Active", "Please select a room with an active camera first.");
             return;
@@ -176,6 +218,36 @@ public class SecurityMonitorController {
         });
     }
 
+    private void registerFromUpload() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Select Face Photo");
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("Image Files", "*.jpg", "*.png", "*.jpeg")
+        );
+
+        File selectedFile = fileChooser.showOpenDialog(root.getScene().getWindow());
+        if (selectedFile != null) {
+            TextInputDialog dialog = new TextInputDialog();
+            dialog.setTitle("Register New Face");
+            dialog.setHeaderText("Upload Successful");
+            dialog.setContentText("Enter name for this person:");
+
+            dialog.showAndWait().ifPresent(name -> {
+                String extension = selectedFile.getName().substring(selectedFile.getName().lastIndexOf("."));
+                File dest = new File("src/main/resources/Faces/family/" + name + extension);
+                File dir = new File("src/main/resources/Faces/family/");
+                if (!dir.exists()) dir.mkdirs();
+
+                try {
+                    Files.copy(selectedFile.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    showAlert("Success", name + " has been registered from file!");
+                } catch (IOException e) {
+                    showAlert("Error", "Failed to copy file: " + e.getMessage());
+                }
+            });
+        }
+    }
+
     private void showAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
@@ -186,18 +258,24 @@ public class SecurityMonitorController {
 
     private void switchCameraToRoom(Room room) {
         List<Device> devices = DatabaseManager.getDevicesForRoom(room.getId());
-        Camera found = null;
-        for (Device d : devices) {
-            if (d instanceof Camera) {
-                found = (Camera) d;
-                break;
-            }
-        }
-        
-        if (found != null) {
-            activeCamera = found;
+        List<Camera> cameras = devices.stream()
+                .filter(d -> d instanceof Camera)
+                .map(d -> (Camera) d)
+                .toList();
+
+        cameraSelector.getItems().clear();
+        cameraSelector.getItems().addAll(cameras);
+
+        if (!cameras.isEmpty()) {
+            cameraSelector.setValue(cameras.get(0));
+            activeCamera = cameras.get(0);
             activeCamera.setLinkedRoom(room);
             activeCamera.turnOn();
+            System.out.println("Switched to camera: " + activeCamera.getName());
+        } else {
+            activeCamera = null;
+            cameraSelector.setPromptText("No Camera");
+            System.out.println("No camera found in " + room.getName());
         }
     }
 

@@ -203,7 +203,18 @@ public class ControlRoomDeviceController {
             refreshLogs();
         });
 
-        card.getChildren().addAll(iconLabel, titleBox, powerBtn);
+        Button settingsBtn = null;
+        if (d instanceof Camera cam) {
+            settingsBtn = new Button("⚙ Settings");
+            settingsBtn.setStyle("-fx-background-color: #f1f5f9; -fx-text-fill: #64748b; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand; -fx-font-size: 10px;");
+            settingsBtn.setOnAction(e -> openEditCameraSourceDialog(cam));
+        }
+
+        if (settingsBtn != null) {
+            card.getChildren().addAll(iconLabel, titleBox, powerBtn, settingsBtn);
+        } else {
+            card.getChildren().addAll(iconLabel, titleBox, powerBtn);
+        }
         return card;
     }
 
@@ -228,10 +239,25 @@ public class ControlRoomDeviceController {
         typeCombo.getItems().addAll("Light", "Fan", "TV", "DoorLock", "Camera");
         typeCombo.setValue("Light");
 
+        TextField sourceField = new TextField("0");
+        sourceField.setPromptText("Cam Index (0, 1) or Stream URL");
+        Label sourceLabel = new Label("Stream Source:");
+        
+        sourceLabel.setVisible(false);
+        sourceField.setVisible(false);
+
+        typeCombo.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            boolean isCam = "Camera".equals(newVal);
+            sourceLabel.setVisible(isCam);
+            sourceField.setVisible(isCam);
+        });
+
         grid.add(new Label("Name:"), 0, 0);
         grid.add(nameField, 1, 0);
         grid.add(new Label("Type:"), 0, 1);
         grid.add(typeCombo, 1, 1);
+        grid.add(sourceLabel, 0, 2);
+        grid.add(sourceField, 1, 2);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -245,7 +271,11 @@ public class ControlRoomDeviceController {
                     case "Fan": return new Fan(id, name);
                     case "TV": return new TV(id, name);
                     case "DoorLock": return new DoorLock(id, name);
-                    case "Camera": return new Camera(id, name, currentRoom);
+                    case "Camera": {
+                        Camera c = new Camera(id, name, currentRoom);
+                        c.setStreamSource(sourceField.getText());
+                        return c;
+                    }
                 }
             }
             return null;
@@ -256,6 +286,21 @@ public class ControlRoomDeviceController {
                 DatabaseManager.addDevice(device, currentRoom.getId());
                 loadDevices();
             }
+        });
+    }
+
+    private void openEditCameraSourceDialog(Camera cam) {
+        TextInputDialog dialog = new TextInputDialog(cam.getStreamSource());
+        dialog.setTitle("Camera Settings");
+        dialog.setHeaderText("Edit stream source for: " + cam.getName());
+        dialog.setContentText("Enter Camera Index (0, 1...) or Stream URL:");
+
+        dialog.showAndWait().ifPresent(newSource -> {
+            cam.setStreamSource(newSource);
+            DatabaseManager.addDevice(cam, currentRoom.getId());
+            loadDevices();
+            DatabaseManager.logEvent(cam.getId(), "Source Updated", "New source: " + newSource);
+            refreshLogs();
         });
     }
 }

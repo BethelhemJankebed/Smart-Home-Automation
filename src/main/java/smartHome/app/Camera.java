@@ -30,6 +30,7 @@ public class Camera extends Device {
     private final HashMap<String, Mat> familyknownEmbeddings = new HashMap<>();
     private final HashMap<String, Mat> childknownEmbeddings = new HashMap<>();
     private final HashMap<String, Long> lastAlertTime = new HashMap<>();
+    private String streamSource = "0"; // Default to index 0
 
     private Room linkedRoom;
 
@@ -37,6 +38,9 @@ public class Camera extends Device {
         super(id, name, "Camera");
         this.linkedRoom = room;
     }
+
+    public String getStreamSource() { return streamSource; }
+    public void setStreamSource(String source) { this.streamSource = source; }
 
     // ==========================================================
     // TURN CAMERA ON
@@ -47,10 +51,16 @@ public class Camera extends Device {
             // Use OpenPNP to load the shared library automatically
             nu.pattern.OpenCV.loadShared();
             
-            // Try DSHOW backend first for Windows stability, fallback to default
-            VC = new VideoCapture(0, Videoio.CAP_DSHOW);
-            if (!VC.isOpened()) {
-                VC = new VideoCapture(0);
+            // Try to parse source as int, else use as string URL
+            try {
+                int index = Integer.parseInt(streamSource);
+                VC = new VideoCapture(index, Videoio.CAP_DSHOW);
+                if (!VC.isOpened()) {
+                    VC = new VideoCapture(index);
+                }
+            } catch (NumberFormatException e) {
+                // Not an integer, use as URL/file path
+                VC = new VideoCapture(streamSource);
             }
             
             if (!VC.isOpened()) {
@@ -293,10 +303,11 @@ public class Camera extends Device {
             double aspectRatio = (double) bounding.width / bounding.height;
             double area = Imgproc.contourArea(contour);
 
-            if (area > 500 && (aspectRatio < 0.3 || aspectRatio > 3.0)) {
+            // Re-tuned for knives: more inclusive aspect ratio, lower min area
+            if (area > 200 && area < 6000 && (aspectRatio < 0.35 || aspectRatio > 2.8)) {
                 // draw rectangle
                 Imgproc.rectangle(frame, bounding.tl(), bounding.br(), new Scalar(0,0,255), 2);
-                System.out.println("⚠ Dangerous object detected (possible knife/scissors)");
+                System.out.println("⚠ Danger detected (possible sharp object) - Area: " + (int)area + ", AR: " + String.format("%.2f", aspectRatio));
                 dangerDetected = true;
             }
         }
@@ -426,7 +437,7 @@ public class Camera extends Device {
 
                 if (unknownDetected) {
                     long nowTime = System.currentTimeMillis();
-                    if (nowTime - lastAlertTime.getOrDefault("SECURITY", 0L) > 60000) {
+                    if (nowTime - lastAlertTime.getOrDefault("SECURITY", 0L) > 120000) {
                         giveImgWarningToModule("Security", frameClone);
                         String snap = saveSnapshot(frameClone, "UNKNOWN_PERSON");
                         if (linkedRoom != null) {
@@ -438,7 +449,7 @@ public class Camera extends Device {
 
                 if (dangerDetected) {
                     long nowTime = System.currentTimeMillis();
-                    if (nowTime - lastAlertTime.getOrDefault("DANGER", 0L) > 60000) {
+                    if (nowTime - lastAlertTime.getOrDefault("DANGER", 0L) > 120000) {
                         String msg = childDetected ? "Child near potential danger in " + name : "Dangerous object detected in " + name;
                         giveImgWarningToModule("Child", frameClone);
                         String snap = saveSnapshot(frameClone, "DANGER");

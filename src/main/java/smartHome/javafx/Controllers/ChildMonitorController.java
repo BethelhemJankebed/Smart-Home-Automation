@@ -30,6 +30,7 @@ public class ChildMonitorController {
     private Camera activeCamera;
     private AnimationTimer timer;
     private ComboBox<Room> roomSelector;
+    private ComboBox<Camera> cameraSelector;
 
     private Label currentRoom;
     private Label currentTime;
@@ -80,8 +81,8 @@ public class ChildMonitorController {
         HBox.setHgrow(s1, Priority.ALWAYS);
 
         roomSelector = new ComboBox<>();
-        roomSelector.setPromptText("Select Source...");
-        roomSelector.setPrefWidth(180);
+        roomSelector.setPromptText("Room...");
+        roomSelector.setPrefWidth(120);
         roomSelector.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 10; -fx-font-size: 11px;");
         
         List<Room> rooms = DatabaseManager.getAllRooms();
@@ -94,12 +95,26 @@ public class ChildMonitorController {
             }
         });
 
+        cameraSelector = new ComboBox<>();
+        cameraSelector.setPromptText("Camera...");
+        cameraSelector.setPrefWidth(120);
+        cameraSelector.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 10; -fx-font-size: 11px;");
+        cameraSelector.setOnAction(e -> {
+            Camera selected = cameraSelector.getValue();
+            if (selected != null && selected != activeCamera) {
+                if (activeCamera != null) activeCamera.turnOff();
+                activeCamera = selected;
+                activeCamera.setLinkedRoom(roomSelector.getValue());
+                activeCamera.turnOn();
+            }
+        });
+
         if (!rooms.isEmpty()) {
             roomSelector.setValue(rooms.get(0));
             switchCameraToRoom(rooms.get(0));
         }
 
-        feedHeader.getChildren().addAll(liveIndicator, feedLabel, s1, roomSelector);
+        feedHeader.getChildren().addAll(liveIndicator, feedLabel, s1, cameraSelector, roomSelector);
         
         videoView = new ImageView();
         videoView.setFitWidth(520);
@@ -161,7 +176,7 @@ public class ChildMonitorController {
         alertsCard.getChildren().addAll(alertsHeader, scroll);
 
         content.getChildren().addAll(feedCard, infoSide, alertsCard);
-        root.getChildren().add(content);
+        root.getChildren().addAll(header, content);
 
         startPolling();
     }
@@ -186,23 +201,24 @@ public class ChildMonitorController {
     }
 
     private void switchCameraToRoom(Room room) {
-        // Find a camera in the selected room
         List<Device> devices = DatabaseManager.getDevicesForRoom(room.getId());
-        Camera found = null;
-        for (Device d : devices) {
-            if (d instanceof Camera) {
-                found = (Camera) d;
-                break;
-            }
-        }
-        
-        if (found != null) {
-            activeCamera = found;
+        List<Camera> cameras = devices.stream()
+                .filter(d -> d instanceof Camera)
+                .map(d -> (Camera) d)
+                .toList();
+
+        cameraSelector.getItems().clear();
+        cameraSelector.getItems().addAll(cameras);
+
+        if (!cameras.isEmpty()) {
+            cameraSelector.setValue(cameras.get(0));
+            activeCamera = cameras.get(0);
             activeCamera.setLinkedRoom(room);
             activeCamera.turnOn();
             System.out.println("Switched to camera: " + activeCamera.getName());
         } else {
-            // Show mock/notice?
+            activeCamera = null;
+            cameraSelector.setPromptText("No Camera");
             System.out.println("No camera found in " + room.getName());
         }
     }
