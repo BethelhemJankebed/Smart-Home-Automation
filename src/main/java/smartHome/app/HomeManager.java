@@ -1,6 +1,5 @@
 package smartHome.app;
 
-import smartHome.app.Room;
 
 import java.util.ArrayList;
 import java.util.List;

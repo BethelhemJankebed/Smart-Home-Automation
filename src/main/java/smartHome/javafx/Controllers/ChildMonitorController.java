@@ -20,6 +20,7 @@ import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.util.List;
 
 public class ChildMonitorController {
@@ -32,6 +33,7 @@ public class ChildMonitorController {
 
     private Label currentRoom;
     private Label currentTime;
+    private VBox alertContainer;
 
     public ChildMonitorController() {
         root = new VBox(25);
@@ -139,10 +141,26 @@ public class ChildMonitorController {
         VBox timeBox = createPremiumInfoTile("Last Seen", "🕒", currentTime = new Label("--:--"), "#f0fdf4", "#10b981");
 
         statusCard.getChildren().addAll(statusHeader, locBox, timeBox);
-        
         infoSide.getChildren().add(statusCard);
 
-        content.getChildren().addAll(feedCard, infoSide);
+        // 3. Alerts Sidebar
+        VBox alertsCard = new VBox(15);
+        alertsCard.setPrefWidth(320);
+        alertsCard.setStyle("-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 20, 0, 0, 10);");
+        
+        Label alertsHeader = new Label("SAFETY NOTIFICATIONS");
+        alertsHeader.setStyle("-fx-font-weight: 900; -fx-text-fill: #94a3b8; -fx-font-size: 10px;");
+        
+        javafx.scene.control.ScrollPane scroll = new javafx.scene.control.ScrollPane();
+        alertContainer = new VBox(15);
+        scroll.setContent(alertContainer);
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        alertsCard.getChildren().addAll(alertsHeader, scroll);
+
+        content.getChildren().addAll(feedCard, infoSide, alertsCard);
         root.getChildren().add(content);
 
         startPolling();
@@ -180,6 +198,7 @@ public class ChildMonitorController {
         
         if (found != null) {
             activeCamera = found;
+            activeCamera.setLinkedRoom(room);
             activeCamera.turnOn();
             System.out.println("Switched to camera: " + activeCamera.getName());
         } else {
@@ -202,14 +221,71 @@ public class ChildMonitorController {
                     }
                 }
                 
-                // Update Location
-                if (now - lastUpdate > 1_000_000_000L) {
+                // Update Location & Alerts every ~1 second
+                if (now - lastUpdate > 1_500_000_000L) {
                     updateLocationUI();
+                    updateAlertsUI();
                     lastUpdate = now;
                 }
             }
         };
         timer.start();
+    }
+
+    private void updateAlertsUI() {
+        Room selected = roomSelector.getValue();
+        if (selected == null || alertContainer == null) return;
+
+        List<String[]> alerts = DatabaseManager.getRecentAlertsForRoomByType(selected.getId(), "DANGER");
+        
+        javafx.application.Platform.runLater(() -> {
+            if (alerts.isEmpty()) {
+                alertContainer.getChildren().clear();
+                Label none = new Label("No recent security alerts");
+                none.setStyle("-fx-text-fill: #94a3b8; -fx-font-size: 11px; -fx-font-style: italic;");
+                alertContainer.getChildren().add(none);
+                return;
+            }
+
+            if (alertContainer.getChildren().size() == alerts.size()) return;
+
+            alertContainer.getChildren().clear();
+            for (String[] alert : alerts) {
+                alertContainer.getChildren().add(createAlertCard(alert[0], alert[1], alert[2]));
+            }
+        });
+    }
+
+    private VBox createAlertCard(String time, String path, String msg) {
+        VBox card = new VBox(10);
+        card.setPadding(new Insets(12));
+        card.setStyle("-fx-background-color: #fff1f2; -fx-background-radius: 15; -fx-border-color: #fecdd3; -fx-border-radius: 15;");
+        
+        Label tLbl = new Label("🕒 " + time);
+        tLbl.setStyle("-fx-font-size: 10px; -fx-font-weight: 900; -fx-text-fill: #e11d48;");
+        
+        Label mLbl = new Label(msg);
+        mLbl.setWrapText(true);
+        mLbl.setStyle("-fx-font-size: 11px; -fx-font-weight: 700; -fx-text-fill: #1e293b;");
+        
+        VBox snapFrame = new VBox();
+        snapFrame.setAlignment(Pos.CENTER);
+        try {
+            String fullPath = new File("src/main/resources/snapshots/" + path).toURI().toString();
+            Image img = new Image(fullPath, 250, 0, true, true);
+            ImageView iv = new ImageView(img);
+            iv.setFitWidth(240);
+            iv.setPreserveRatio(true);
+            
+            Rectangle snclip = new Rectangle(240, 140);
+            snclip.setArcWidth(20);
+            snclip.setArcHeight(20);
+            iv.setClip(snclip);
+            snapFrame.getChildren().add(iv);
+        } catch (Exception e) {}
+        
+        card.getChildren().addAll(tLbl, snapFrame, mLbl);
+        return card;
     }
     
     private void updateLocationUI() {

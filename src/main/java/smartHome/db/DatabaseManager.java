@@ -32,6 +32,7 @@ public class DatabaseManager {
         createDevicesTable();
         createEventsTable();
         createLocationsTable();
+        createAlertsTable();
     }
 
     public static void updateLocation(String person, int roomId) {
@@ -125,6 +126,69 @@ public class DatabaseManager {
                       "details TEXT" +
                       ");";
          try (Connection conn = connect(); Statement stmt = conn.createStatement()) { stmt.execute(sql); } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    private static void createAlertsTable() {
+        String sql = "CREATE TABLE IF NOT EXISTS alerts (" +
+                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                     "room_id INTEGER," +
+                     "timestamp TEXT," +
+                     "type TEXT," +
+                     "snapshot_path TEXT," +
+                     "message TEXT" +
+                     ");";
+        try (Connection conn = connect(); Statement stmt = conn.createStatement()) { 
+            stmt.execute(sql); 
+        } catch (SQLException e) { 
+            e.printStackTrace(); 
+        }
+    }
+
+    public static void saveAlert(int roomId, String type, String path, String message) {
+        String sql = "INSERT INTO alerts(room_id, timestamp, type, snapshot_path, message) VALUES(?,?,?,?,?)";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            ps.setString(2, java.time.LocalTime.now().toString().substring(0, 8));
+            ps.setString(3, type);
+            ps.setString(4, path);
+            ps.setString(5, message);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    public static List<String[]> getRecentAlertsForRoom(int roomId) {
+        List<String[]> alerts = new ArrayList<>();
+        String sql = "SELECT timestamp, snapshot_path, message FROM alerts WHERE room_id = ? ORDER BY id DESC LIMIT 10";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                alerts.add(new String[]{
+                    rs.getString("timestamp"),
+                    rs.getString("snapshot_path"),
+                    rs.getString("message")
+                });
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return alerts;
+    }
+
+    public static List<String[]> getRecentAlertsForRoomByType(int roomId, String type) {
+        List<String[]> alerts = new ArrayList<>();
+        String sql = "SELECT timestamp, snapshot_path, message FROM alerts WHERE room_id = ? AND type = ? ORDER BY id DESC LIMIT 10";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            ps.setString(2, type);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                alerts.add(new String[]{
+                    rs.getString("timestamp"),
+                    rs.getString("snapshot_path"),
+                    rs.getString("message")
+                });
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return alerts;
     }
 
     public static boolean registerUser(String username, String password) {

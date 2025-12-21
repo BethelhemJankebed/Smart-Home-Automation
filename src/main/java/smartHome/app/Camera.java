@@ -29,6 +29,7 @@ public class Camera extends Device {
 
     private final HashMap<String, Mat> familyknownEmbeddings = new HashMap<>();
     private final HashMap<String, Mat> childknownEmbeddings = new HashMap<>();
+    private final HashMap<String, Long> lastAlertTime = new HashMap<>();
 
     private Room linkedRoom;
 
@@ -141,6 +142,10 @@ public class Camera extends Device {
         };
     }
 
+    public void setLinkedRoom(Room room) {
+        this.linkedRoom = room;
+    }
+
     // LOADING FACES
 
     private void loadKnownFaces() {
@@ -219,8 +224,8 @@ public class Camera extends Device {
                             }
                         }
                     }
-                    // Log event
-                    saveSnapshot(frame, "MOTION");
+                    // Log event without snapshot for simple motion
+                    DatabaseManager.logEvent(this.id, "MOTION", "Motion detected in " + name);
                 }
 
                 // Auto turn off after 30 sec
@@ -240,16 +245,16 @@ public class Camera extends Device {
         }).start();
     }
 
-    public void saveSnapshot(Mat frame, String type) {
+    public String saveSnapshot(Mat frame, String type) {
         String filename = "snapshot_" + System.currentTimeMillis() + ".jpg";
         String path = "src/main/resources/snapshots/" + filename;
         File dir = new File("src/main/resources/snapshots/");
         if (!dir.exists()) dir.mkdirs();
         
         Imgcodecs.imwrite(path, frame);
-        // Log to DB
-        // DatabaseManager.logEvent(this.id, type, path); // Uncomment when DB is ready
+        DatabaseManager.logEvent(this.id, type, "Snapshot captured for " + type);
         System.out.println("Snapshot saved: " + path);
+        return filename;
     }
 
 
@@ -420,11 +425,28 @@ public class Camera extends Device {
                 // --- Alerts ---
 
                 if (unknownDetected) {
-                    giveImgWarningToModule("Security", frameClone);
+                    long nowTime = System.currentTimeMillis();
+                    if (nowTime - lastAlertTime.getOrDefault("SECURITY", 0L) > 60000) {
+                        giveImgWarningToModule("Security", frameClone);
+                        String snap = saveSnapshot(frameClone, "UNKNOWN_PERSON");
+                        if (linkedRoom != null) {
+                            DatabaseManager.saveAlert(linkedRoom.getId(), "SECURITY", snap, "Unknown person detected in " + name);
+                        }
+                        lastAlertTime.put("SECURITY", nowTime);
+                    }
                 }
 
-                if (childDetected && dangerDetected) {
-                   giveImgWarningToModule("Child",frameClone);
+                if (dangerDetected) {
+                    long nowTime = System.currentTimeMillis();
+                    if (nowTime - lastAlertTime.getOrDefault("DANGER", 0L) > 60000) {
+                        String msg = childDetected ? "Child near potential danger in " + name : "Dangerous object detected in " + name;
+                        giveImgWarningToModule("Child", frameClone);
+                        String snap = saveSnapshot(frameClone, "DANGER");
+                        if (linkedRoom != null) {
+                            DatabaseManager.saveAlert(linkedRoom.getId(), "DANGER", snap, msg);
+                        }
+                        lastAlertTime.put("DANGER", nowTime);
+                    }
                 }
                 
                 try { Thread.sleep(50); } catch (InterruptedException e) { break; }

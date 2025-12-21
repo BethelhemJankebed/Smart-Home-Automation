@@ -8,7 +8,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import smartHome.db.DatabaseManager;
-import smartHome.javafx.Scene.SceneManager;
 
 public class SignupScene {
 
