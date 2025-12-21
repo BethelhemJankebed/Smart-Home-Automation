@@ -8,6 +8,13 @@ import org.opencv.objdetect.FaceDetectorYN;
 import org.opencv.objdetect.FaceRecognizerSF;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
+import org.opencv.dnn.Dnn;
+import org.opencv.dnn.Net;
+import org.opencv.core.MatOfRect2d;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfInt;
+import org.opencv.core.Rect2d;
+import org.opencv.core.Scalar;
 
 import smartHome.db.DatabaseManager;
 
@@ -26,6 +33,9 @@ public class Camera extends Device {
     //models
     private final String faceModel = "src/main/resources/models/face_detection_yunet_2023mar.onnx";
     private final String recogModel = "src/main/resources/models/face_recognition_sface_2021dec.onnx";
+    private final String yoloModel = "src/main/resources/models/yolov8n.onnx";
+
+    private Net yoloNet;
 
     private final HashMap<String, Mat> familyknownEmbeddings = new HashMap<>();
     private final HashMap<String, Mat> childknownEmbeddings = new HashMap<>();
@@ -75,6 +85,15 @@ public class Camera extends Device {
                 
                 System.out.println(name + " is ACTIVE");
                 isRunning = true;
+                
+                // Initialize YOLO
+                try {
+                    yoloNet = Dnn.readNetFromONNX(yoloModel);
+                    System.out.println("✔ YOLO Object Detection loaded.");
+                } catch (Exception e) {
+                    System.out.println("⚠ Failed to load YOLO: " + e.getMessage());
+                }
+
                 loadKnownFaces();
                 StartMotionDetection();
                 startFaceRecognition();
@@ -121,6 +140,7 @@ public class Camera extends Device {
             Mat img = Imgcodecs.imread(f.getAbsolutePath());
             if (img.empty()) continue;
 
+            // Simple blunt resize to match live recognition
             Mat resized = new Mat();
             Imgproc.resize(img, resized, size);
 
@@ -158,20 +178,19 @@ public class Camera extends Device {
 
     // LOADING FACES
 
-    private void loadKnownFaces() {
+    public void loadKnownFaces() {
+        familyknownEmbeddings.clear();
+        childknownEmbeddings.clear();
 
-        File family_dir = new File("src/main/resources/Faces/family");
+        File family_dir = new File("src/main/resources/faces/family");
         File[] family_files = family_dir.listFiles();
-
-        //loads family/known people
         loadFacesFromFiles(family_files, familyknownEmbeddings);
 
-        File child_dir = new File("src/main/resources/Faces/Child");
+        File child_dir = new File("src/main/resources/faces/child");
         File[] child_files = child_dir.listFiles();
-
-        //loads child's face
         loadFacesFromFiles(child_files, childknownEmbeddings);
-
+        
+        System.out.println("ℹ System Memory: " + familyknownEmbeddings.size() + " Family, " + childknownEmbeddings.size() + " Children loaded.");
     }
 
     private volatile Mat latestFrame;
@@ -270,45 +289,109 @@ public class Camera extends Device {
 
     // FACE DETECTION, RECOGNITION, CHILD SAFETY THREAD
 
+    private String getClassName(int classId) {
+        return switch(classId) {
+            case 0 -> "Person";
+            case 43 -> "Knife";
+            case 76 -> "Scissors";
+            case 70 -> "Stove";
+            default -> "Object (" + classId + ")";
+        };
+    }
+
     private boolean detectDangerous(Mat frame) {
-        if (frame.empty()) return false;
+        if (frame.empty()) {
+            System.out.println("⚠ YOLO: Frame is empty");
+            return false;
+        }
+        if (yoloNet == null) {
+            System.out.println("⚠ YOLO: Network not loaded");
+            return false;
+        }
 
         boolean dangerDetected = false;
+        
+        // --- YOLO Pre-processing ---
+        Mat blob = Dnn.blobFromImage(frame, 1/255.0, new Size(640, 640), new Scalar(0,0,0), true, false);
+        yoloNet.setInput(blob);
+        
+        List<Mat> outputs = new ArrayList<>();
+        yoloNet.forward(outputs, yoloNet.getUnconnectedOutLayersNames());
+        
+        if (outputs.isEmpty()) {
+            System.out.println("⚠ YOLO: No outputs from network");
+            return false;
+        }
+        
+        Mat output = outputs.get(0); // [1, 84, 8400]
+        System.out.println("ℹ YOLO Output shape: " + output.size());
+        
+        // Reshape and Transpose: [1, 84, 8400] -> [84, 8400] -> [8400, 84]
+        Mat reshaped = output.reshape(1, 84);
+        Mat transposed = new Mat();
+        Core.transpose(reshaped, transposed);
 
-        // Convert to grayscale
-        Mat gray = new Mat();
-        Imgproc.cvtColor(frame, gray, Imgproc.COLOR_BGR2GRAY);
+        List<Rect2d> boxes = new ArrayList<>();
+        List<Float> confidences = new ArrayList<>();
+        List<Integer> classIds = new ArrayList<>();
 
-        // Blur to reduce noise
-        Imgproc.GaussianBlur(gray, gray, new Size(5,5), 0);
+        float confThreshold = 0.25f; // Lowered for debugging
 
-        // Detect edges using Canny
-        Mat edges = new Mat();
-        Imgproc.Canny(gray, edges, 50, 150);
+        int detectionCount = 0;
+        for (int i = 0; i < transposed.rows(); i++) {
+            Mat row = transposed.row(i);
+            Mat scores = row.colRange(4, 84);
+            Core.MinMaxLocResult mm = Core.minMaxLoc(scores);
+            float maxScore = (float) mm.maxVal;
+            int classId = (int) mm.maxLoc.x;
 
-        // Find contours
-        List<MatOfPoint> contours = new ArrayList<>();
-        Mat hierarchy = new Mat();
-        Imgproc.findContours(edges, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            if (maxScore > confThreshold) {
+                detectionCount++;
+                float cx = (float) row.get(0, 0)[0];
+                float cy = (float) row.get(0, 1)[0];
+                float w = (float) row.get(0, 2)[0];
+                float h = (float) row.get(0, 3)[0];
 
-        for (MatOfPoint contour : contours) {
-            // Approximate the contour to a polygon
-            MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
-            double peri = Imgproc.arcLength(contour2f, true);
-            MatOfPoint2f approx = new MatOfPoint2f();
-            Imgproc.approxPolyDP(contour2f, approx, 0.02 * peri, true);
+                // Scale to frame
+                double x = (cx - w/2) * frame.cols() / 640.0;
+                double y = (cy - h/2) * frame.rows() / 640.0;
+                double width = w * frame.cols() / 640.0;
+                double height = h * frame.rows() / 640.0;
 
-            // Heuristic: sharp objects often have long thin shape
-            Rect bounding = Imgproc.boundingRect(new MatOfPoint(approx.toArray()));
-            double aspectRatio = (double) bounding.width / bounding.height;
-            double area = Imgproc.contourArea(contour);
+                boxes.add(new Rect2d(x, y, width, height));
+                confidences.add(maxScore);
+                classIds.add(classId);
+                
+                // Log ALL detections for debugging
+                System.out.println(String.format("  Detection: Class %d (%s) - Conf: %.2f", 
+                    classId, getClassName(classId), maxScore));
+            }
+        }
+        
+        System.out.println("ℹ YOLO: Found " + detectionCount + " detections above threshold " + confThreshold);
 
-            // Re-tuned for knives: more inclusive aspect ratio, lower min area
-            if (area > 200 && area < 6000 && (aspectRatio < 0.35 || aspectRatio > 2.8)) {
-                // draw rectangle
-                Imgproc.rectangle(frame, bounding.tl(), bounding.br(), new Scalar(0,0,255), 2);
-                System.out.println("⚠ Danger detected (possible sharp object) - Area: " + (int)area + ", AR: " + String.format("%.2f", aspectRatio));
-                dangerDetected = true;
+        if (!boxes.isEmpty()) {
+            MatOfRect2d boxesMat = new MatOfRect2d();
+            boxesMat.fromList(boxes);
+            
+            float[] confArr = new float[confidences.size()];
+            for(int i=0; i<confidences.size(); i++) confArr[i] = confidences.get(i);
+            MatOfFloat confMat = new MatOfFloat();
+            confMat.fromArray(confArr);
+
+            MatOfInt indices = new MatOfInt();
+            Dnn.NMSBoxes(boxesMat, confMat, confThreshold, 0.45f, indices);
+
+            for (int idx : indices.toArray()) {
+                int cId = classIds.get(idx);
+                // Dangerous: Knife (43), Scissors (76), Stove (70)
+                if (cId == 43 || cId == 76 || cId == 70) {
+                    dangerDetected = true;
+                    Rect2d box = boxes.get(idx);
+                    Imgproc.rectangle(frame, new Point(box.x, box.y), new Point(box.x + box.width, box.y + box.height), new Scalar(0,0,255), 2);
+                    Imgproc.putText(frame, getClassName(cId), new Point(box.x, box.y - 5), Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0,0,255), 1);
+                    System.out.println("⚠ YOLO Detected " + getClassName(cId) + " - Confidence: " + String.format("%.2f", confidences.get(idx)));
+                }
             }
         }
 
@@ -347,86 +430,73 @@ public class Camera extends Device {
 
                 Mat frameClone = frame.clone(); // for dangerous object detection so that it gets the full image
 
-                // --- Resize while preserving an aspect ratio ---
                 Mat resized = new Mat();
-                double scale = Math.min(inputSize.width / frame.cols(), inputSize.height / frame.rows());
-                int newWidth = (int)(frame.cols() * scale);
-                int newHeight = (int)(frame.rows() * scale);
-                Imgproc.resize(frame, resized, new Size(newWidth, newHeight));
+                Imgproc.resize(frame, resized, inputSize);
 
-                // Pad to square if needed
-                int top = (int) ((inputSize.height - newHeight) / 2);
-                int bottom = (int) (inputSize.height - newHeight - top);
-                int left = (int) ((inputSize.width - newWidth) / 2);
-                int right = (int) (inputSize.width - newWidth - left);
-                Core.copyMakeBorder(resized, resized, top, bottom, left, right, Core.BORDER_CONSTANT, new Scalar(0,0,0));
-
-                // --- Convert to grayscale + improves lighting ---
-                Mat gray = new Mat();
-                Imgproc.cvtColor(resized, gray, Imgproc.COLOR_BGR2GRAY);
-                Imgproc.equalizeHist(gray, gray);
+                // --- Convert to grayscale (Original code used this for light correction check) ---
+                // We will use the original resized BGR frame for YuNet and SFace as they are optimized for it.
 
                 Mat detections = new Mat();
                 detector.detect(resized, detections);
 
-                if (detections.rows() == 0) continue;
-
                 boolean childDetected = false;
                 boolean unknownDetected = false;
 
-                for (int i = 0; i < detections.rows(); i++) {
+                if (detections.rows() > 0) {
+                    for (int i = 0; i < detections.rows(); i++) {
+                        Mat aligned = new Mat();
+                        Mat embedding = new Mat();
 
-                    Mat aligned = new Mat();
-                    Mat embedding = new Mat();
+                        recognizer.alignCrop(resized, detections.row(i), aligned);
+                        recognizer.feature(aligned, embedding);
 
-                    recognizer.alignCrop(resized, detections.row(i), aligned);
-                    recognizer.feature(aligned, embedding);
+                        double bestChildScore = Double.MAX_VALUE;
+                        String bestChildMatch = null;
+                        double bestFamilyScore = Double.MAX_VALUE;
+                        String bestFamilyMatch = null;
 
-                    double bestScore = Double.MAX_VALUE;
-                    String bestMatch = null;
-                    String bestGroup = null;
-
-                    // --- check children ---
-                    for (String child : childknownEmbeddings.keySet()) {
-                        double score = recognizer.match(
-                                childknownEmbeddings.get(child),
-                                embedding,
-                                FaceRecognizerSF.FR_NORM_L2
-                        );
-                        if (score < bestScore) {
-                            bestScore = score;
-                            bestMatch = child;
-                            bestGroup = "CHILD";
+                        // --- check children ---
+                        for (String child : childknownEmbeddings.keySet()) {
+                            double score = recognizer.match(childknownEmbeddings.get(child), embedding, FaceRecognizerSF.FR_NORM_L2);
+                            if (score < bestChildScore) {
+                                bestChildScore = score;
+                                bestChildMatch = child;
+                            }
                         }
-                    }
 
-                    // --- check family ---
-                    for (String member : familyknownEmbeddings.keySet()) {
-                        double score = recognizer.match(
-                                familyknownEmbeddings.get(member),
-                                embedding,
-                                FaceRecognizerSF.FR_NORM_L2
-                        );
-                        if (score < bestScore) {
-                            bestScore = score;
-                            bestMatch = member;
-                            bestGroup = "FAMILY";
+                        // --- check family ---
+                        for (String member : familyknownEmbeddings.keySet()) {
+                            double score = recognizer.match(familyknownEmbeddings.get(member), embedding, FaceRecognizerSF.FR_NORM_L2);
+                            if (score < bestFamilyScore) {
+                                bestFamilyScore = score;
+                                bestFamilyMatch = member;
+                            }
                         }
-                    }
 
-                    // --- decision ---
-                    if (bestScore < 1.05) {
-                        if ("CHILD".equals(bestGroup)) {
+                        // Determine overall best
+                        double bestScore = Math.min(bestChildScore, bestFamilyScore);
+                        String bestMatch = (bestChildScore < bestFamilyScore) ? bestChildMatch : bestFamilyMatch;
+                        String bestGroup = (bestChildScore < bestFamilyScore) ? "CHILD" : "FAMILY";
+
+                        // Safety Priority: If a child is even remotely visible (< 1.35), we should treat them as present for danger alerts
+                        if (bestChildScore < 1.35) {
                             childDetected = true;
+                        }
+
+                        // --- decision ---
+                        System.out.println(String.format("DEBUG Match - Best Child: %s (%.3f) | Best Family: %s (%.3f)", 
+                            bestChildMatch, bestChildScore, bestFamilyMatch, bestFamilyScore));
+
+                        if (bestScore < 1.20) {
                             if (linkedRoom != null) {
                                 DatabaseManager.updateLocation(bestMatch, linkedRoom.getId());
                             }
+                            if ("CHILD".equals(bestGroup)) {
+                                childDetected = true;
+                            }
                         } else {
+                            unknownDetected = true;
                         }
-                        // familyDetected = true;
-                        // detectedPerson = bestMatch;
-                    } else {
-                        unknownDetected = true;
                     }
                 }
 
@@ -447,16 +517,18 @@ public class Camera extends Device {
                     }
                 }
 
-                if (dangerDetected) {
+                if (dangerDetected && (childDetected || unknownDetected)) {
                     long nowTime = System.currentTimeMillis();
                     if (nowTime - lastAlertTime.getOrDefault("DANGER", 0L) > 120000) {
-                        String msg = childDetected ? "Child near potential danger in " + name : "Dangerous object detected in " + name;
+                        String personType = childDetected ? "Child" : "Unknown Person";
+                        String msg = personType + " near potential danger in " + name;
                         giveImgWarningToModule("Child", frameClone);
                         String snap = saveSnapshot(frameClone, "DANGER");
                         if (linkedRoom != null) {
                             DatabaseManager.saveAlert(linkedRoom.getId(), "DANGER", snap, msg);
                         }
                         lastAlertTime.put("DANGER", nowTime);
+                        System.out.println("🚨 DANGER Alert fired: " + personType + " is near a dangerous object/stove.");
                     }
                 }
                 

@@ -33,6 +33,7 @@ public class DatabaseManager {
         createEventsTable();
         createLocationsTable();
         createAlertsTable();
+        createFaceTable();
     }
 
     public static void updateLocation(String person, int roomId) {
@@ -151,6 +152,45 @@ public class DatabaseManager {
         } catch (SQLException e) { 
             e.printStackTrace(); 
         }
+    }    private static void createFaceTable() {
+        String sql = "CREATE TABLE IF NOT EXISTS registered_faces (" +
+                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                     "name TEXT UNIQUE NOT NULL," +
+                     "category TEXT NOT NULL," +
+                     "image_path TEXT" +
+                     ");";
+        try (Connection conn = connect(); Statement stmt = conn.createStatement()) { 
+            stmt.execute(sql); 
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    public static void registerFace(String name, String category, String path) {
+        String sql = "INSERT OR REPLACE INTO registered_faces(name, category, image_path) VALUES(?,?,?)";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ps.setString(2, category);
+            ps.setString(3, path);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    public static List<String[]> getAllRegisteredFaces() {
+        List<String[]> faces = new ArrayList<>();
+        String sql = "SELECT name, category, image_path FROM registered_faces";
+        try (Connection conn = connect(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                faces.add(new String[]{rs.getString("name"), rs.getString("category"), rs.getString("image_path")});
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return faces;
+    }
+
+    public static void deleteFace(String name) {
+        String sql = "DELETE FROM registered_faces WHERE name = ?";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
     }
 
     public static void saveAlert(int roomId, String type, String path, String message) {

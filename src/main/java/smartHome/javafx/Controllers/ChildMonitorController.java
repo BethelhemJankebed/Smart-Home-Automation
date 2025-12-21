@@ -85,6 +85,11 @@ public class ChildMonitorController {
         roomSelector.setPrefWidth(120);
         roomSelector.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 10; -fx-font-size: 11px;");
         
+        roomSelector.setConverter(new javafx.util.StringConverter<Room>() {
+            @Override public String toString(Room r) { return r == null ? "" : r.getName(); }
+            @Override public Room fromString(String s) { return null; }
+        });
+        
         List<Room> rooms = DatabaseManager.getAllRooms();
         roomSelector.getItems().addAll(rooms);
         roomSelector.setOnAction(e -> {
@@ -99,6 +104,10 @@ public class ChildMonitorController {
         cameraSelector.setPromptText("Camera...");
         cameraSelector.setPrefWidth(120);
         cameraSelector.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 10; -fx-font-size: 11px;");
+        cameraSelector.setConverter(new javafx.util.StringConverter<Camera>() {
+            @Override public String toString(Camera c) { return c == null ? "" : c.getName(); }
+            @Override public Camera fromString(String s) { return null; }
+        });
         cameraSelector.setOnAction(e -> {
             Camera selected = cameraSelector.getValue();
             if (selected != null && selected != activeCamera) {

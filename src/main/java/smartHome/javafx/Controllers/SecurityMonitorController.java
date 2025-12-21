@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
-import java.util.Optional;
 import javafx.stage.FileChooser;
 
 public class SecurityMonitorController {
@@ -63,11 +62,15 @@ public class SecurityMonitorController {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         
+        Button manageBtn = new Button("Manage Faces");
+        manageBtn.setStyle("-fx-background-color: white; -fx-text-fill: #1e293b; -fx-font-weight: 800; -fx-background-radius: 10; -fx-padding: 10 20; -fx-cursor: hand; -fx-border-color: #cbd5e1; -fx-border-radius: 10;");
+        manageBtn.setOnAction(e -> handleManageFaces());
+        
         Button registerBtn = new Button("Register Face");
         registerBtn.setStyle("-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-font-weight: 800; -fx-background-radius: 10; -fx-padding: 10 20; -fx-cursor: hand;");
         registerBtn.setOnAction(e -> handleRegisterFace());
 
-        header.getChildren().addAll(backBtn, titleBox, spacer, registerBtn);
+        header.getChildren().addAll(backBtn, titleBox, spacer, manageBtn, registerBtn);
 
         // Content
         HBox content = new HBox(30);
@@ -92,10 +95,19 @@ public class SecurityMonitorController {
         roomSelector.setPrefWidth(120);
         roomSelector.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 10; -fx-font-size: 11px;");
         
+        roomSelector.setConverter(new javafx.util.StringConverter<Room>() {
+            @Override public String toString(Room r) { return r == null ? "" : r.getName(); }
+            @Override public Room fromString(String s) { return null; }
+        });
+        
         cameraSelector = new ComboBox<>();
         cameraSelector.setPromptText("Camera...");
         cameraSelector.setPrefWidth(120);
         cameraSelector.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 10; -fx-font-size: 11px;");
+        cameraSelector.setConverter(new javafx.util.StringConverter<Camera>() {
+            @Override public String toString(Camera c) { return c == null ? "" : c.getName(); }
+            @Override public Camera fromString(String s) { return null; }
+        });
         cameraSelector.setOnAction(e -> {
             Camera selected = cameraSelector.getValue();
             if (selected != null && selected != activeCamera) {
@@ -169,29 +181,106 @@ public class SecurityMonitorController {
         startPolling();
     }
 
-    private void handleRegisterFace() {
-        Alert choice = new Alert(Alert.AlertType.CONFIRMATION);
-        choice.setTitle("Register Face");
-        choice.setHeaderText("Registration Source");
-        choice.setContentText("Would you like to capture the current camera frame or upload a photo from your computer?");
+    private void handleManageFaces() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Manage Registered Faces");
+        dialog.setHeaderText("List of all registered people");
 
-        ButtonType capBtn = new ButtonType("Capture Feed");
-        ButtonType upBtn = new ButtonType("Upload File");
-        ButtonType cancelBtn = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        content.setPrefWidth(400);
 
-        choice.getButtonTypes().setAll(capBtn, upBtn, cancelBtn);
+        List<String[]> faces = DatabaseManager.getAllRegisteredFaces();
+        if (faces.isEmpty()) {
+            content.getChildren().add(new Label("No faces registered yet."));
+        } else {
+            for (String[] face : faces) {
+                HBox row = new HBox(15);
+                row.setAlignment(Pos.CENTER_LEFT);
+                row.setPadding(new Insets(10));
+                row.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 10;");
 
-        Optional<ButtonType> result = choice.showAndWait();
-        if (result.isPresent()) {
-            if (result.get() == capBtn) {
-                registerFromCamera();
-            } else if (result.get() == upBtn) {
-                registerFromUpload();
+                VBox info = new VBox(2);
+                Label nameLbl = new Label(face[0]);
+                nameLbl.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+                Label catLbl = new Label(face[1]);
+                catLbl.setStyle("-fx-text-fill: #64748b; -fx-font-size: 11px;");
+                info.getChildren().addAll(nameLbl, catLbl);
+
+                Region s = new Region();
+                HBox.setHgrow(s, Priority.ALWAYS);
+
+                Button delBtn = new Button("Delete");
+                delBtn.setStyle("-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5;");
+                delBtn.setOnAction(e -> {
+                    Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Delete " + face[0] + "?", ButtonType.YES, ButtonType.NO);
+                    confirm.showAndWait().ifPresent(response -> {
+                        if (response == ButtonType.YES) {
+                            // 1. Delete from database
+                            DatabaseManager.deleteFace(face[0]);
+                            
+                            // 2. Delete from filesystem
+                            File f = new File(face[2]);
+                            if (f.exists()) f.delete();
+                            
+                            // 3. Reload embeddings
+                            if (activeCamera != null) activeCamera.loadKnownFaces();
+                            
+                            // 4. Refresh dialog content (naive way: close and reopen or just remove row)
+                            row.setVisible(false);
+                            row.setManaged(false);
+                            showAlert("Success", face[0] + " has been deleted.");
+                        }
+                    });
+                });
+
+                row.getChildren().addAll(info, s, delBtn);
+                content.getChildren().add(row);
             }
         }
+
+        ScrollPane scroll = new ScrollPane(content);
+        scroll.setFitToWidth(true);
+        scroll.setPrefHeight(400);
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: #f8fafc;");
+
+        dialog.getDialogPane().setContent(scroll);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.showAndWait();
     }
 
-    private void registerFromCamera() {
+    private void handleRegisterFace() {
+        // Step 1: Select Category
+        ChoiceDialog<String> categoryDialog = new ChoiceDialog<>("FAMILY", "CHILD", "FAMILY");
+        categoryDialog.setTitle("Register Face");
+        categoryDialog.setHeaderText("Category Selection");
+        categoryDialog.setContentText("Select category for this person:");
+        
+        categoryDialog.showAndWait().ifPresent(category -> {
+            String displayCategory = category.substring(0, 1).toUpperCase() + category.substring(1).toLowerCase();
+            // Step 2: Select Source
+            Alert choice = new Alert(Alert.AlertType.CONFIRMATION);
+            choice.setTitle("Register Face - " + displayCategory);
+            choice.setHeaderText("Registration Source");
+            choice.setContentText("Select source for the face photo:");
+
+            ButtonType capBtn = new ButtonType("Capture Feed");
+            ButtonType upBtn = new ButtonType("Upload File");
+            ButtonType cancelBtn = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+            choice.getButtonTypes().setAll(capBtn, upBtn, cancelBtn);
+
+            choice.showAndWait().ifPresent(result -> {
+                if (result == capBtn) {
+                    registerFromCamera(displayCategory);
+                } else if (result == upBtn) {
+                    registerFromUpload(displayCategory);
+                }
+            });
+        });
+    }
+
+    private void registerFromCamera(String category) {
         if (activeCamera == null) {
             showAlert("No Camera Active", "Please select a room with an active camera first.");
             return;
@@ -205,20 +294,23 @@ public class SecurityMonitorController {
 
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Register New Face");
-        dialog.setHeaderText("New Person Detected");
+        dialog.setHeaderText("New " + category + " Member");
         dialog.setContentText("Enter name for this person:");
         
         dialog.showAndWait().ifPresent(name -> {
-            String path = "src/main/resources/Faces/family/" + name + ".jpg";
-            File dir = new File("src/main/resources/Faces/family/");
+            String dirPath = "src/main/resources/faces/" + category.toLowerCase() + "/";
+            String filePath = dirPath + name + ".jpg";
+            File dir = new File(dirPath);
             if (!dir.exists()) dir.mkdirs();
             
-            Imgcodecs.imwrite(path, frame);
-            showAlert("Success", name + " has been registered successfully!");
+            Imgcodecs.imwrite(filePath, frame);
+            DatabaseManager.registerFace(name, category, filePath);
+            if (activeCamera != null) activeCamera.loadKnownFaces();
+            showAlert("Success", name + " has been registered as " + category + "!");
         });
     }
 
-    private void registerFromUpload() {
+    private void registerFromUpload(String category) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select Face Photo");
         fileChooser.getExtensionFilters().addAll(
@@ -230,17 +322,21 @@ public class SecurityMonitorController {
             TextInputDialog dialog = new TextInputDialog();
             dialog.setTitle("Register New Face");
             dialog.setHeaderText("Upload Successful");
-            dialog.setContentText("Enter name for this person:");
+            dialog.setContentText("Enter name for this " + category + " person:");
 
             dialog.showAndWait().ifPresent(name -> {
                 String extension = selectedFile.getName().substring(selectedFile.getName().lastIndexOf("."));
-                File dest = new File("src/main/resources/Faces/family/" + name + extension);
-                File dir = new File("src/main/resources/Faces/family/");
+                String dirPath = "src/main/resources/faces/" + category.toLowerCase() + "/";
+                String filePath = dirPath + name + extension;
+                File dest = new File(filePath);
+                File dir = new File(dirPath);
                 if (!dir.exists()) dir.mkdirs();
 
                 try {
                     Files.copy(selectedFile.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    showAlert("Success", name + " has been registered from file!");
+                    DatabaseManager.registerFace(name, category, filePath);
+                    if (activeCamera != null) activeCamera.loadKnownFaces();
+                    showAlert("Success", name + " has been registered as " + category + " from file!");
                 } catch (IOException e) {
                     showAlert("Error", "Failed to copy file: " + e.getMessage());
                 }
