@@ -145,10 +145,17 @@ public class DatabaseManager {
                      "timestamp TEXT," +
                      "type TEXT," +
                      "snapshot_path TEXT," +
+                     "snapshot_data BLOB," +
                      "message TEXT" +
                      ");";
         try (Connection conn = connect(); Statement stmt = conn.createStatement()) { 
-            stmt.execute(sql); 
+            stmt.execute(sql);
+            // Add snapshot_data column if it doesn't exist (for existing databases)
+            try {
+                stmt.execute("ALTER TABLE alerts ADD COLUMN snapshot_data BLOB");
+            } catch (SQLException e) {
+                // Column already exists, ignore
+            }
         } catch (SQLException e) { 
             e.printStackTrace(); 
         }
@@ -157,32 +164,51 @@ public class DatabaseManager {
                      "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                      "name TEXT UNIQUE NOT NULL," +
                      "category TEXT NOT NULL," +
-                     "image_path TEXT" +
+                     "image_path TEXT," +
+                     "image_data BLOB" +
                      ");";
         try (Connection conn = connect(); Statement stmt = conn.createStatement()) { 
-            stmt.execute(sql); 
+            stmt.execute(sql);
+            // Add image_data column if it doesn't exist (for existing databases)
+            try {
+                stmt.execute("ALTER TABLE registered_faces ADD COLUMN image_data BLOB");
+            } catch (SQLException e) {
+                // Column already exists, ignore
+            }
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    public static void registerFace(String name, String category, String path) {
-        String sql = "INSERT OR REPLACE INTO registered_faces(name, category, image_path) VALUES(?,?,?)";
+    public static void registerFace(String name, String category, byte[] imageData) {
+        String sql = "INSERT OR REPLACE INTO registered_faces(name, category, image_data) VALUES(?,?,?)";
         try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, name);
             ps.setString(2, category);
-            ps.setString(3, path);
+            ps.setBytes(3, imageData);
             ps.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
     public static List<String[]> getAllRegisteredFaces() {
         List<String[]> faces = new ArrayList<>();
-        String sql = "SELECT name, category, image_path FROM registered_faces";
+        String sql = "SELECT name, category FROM registered_faces";
         try (Connection conn = connect(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                faces.add(new String[]{rs.getString("name"), rs.getString("category"), rs.getString("image_path")});
+                faces.add(new String[]{rs.getString("name"), rs.getString("category")});
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return faces;
+    }
+    
+    public static byte[] getFaceImage(String name) {
+        String sql = "SELECT image_data FROM registered_faces WHERE name = ?";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getBytes("image_data");
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return null;
     }
 
     public static void deleteFace(String name) {
@@ -200,6 +226,19 @@ public class DatabaseManager {
             ps.setString(2, java.time.LocalTime.now().toString().substring(0, 8));
             ps.setString(3, type);
             ps.setString(4, path);
+            ps.setString(5, message);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+    
+    // New method for BLOB storage
+    public static void saveAlertWithBlob(int roomId, String type, byte[] snapshotData, String message) {
+        String sql = "INSERT INTO alerts(room_id, timestamp, type, snapshot_data, message) VALUES(?,?,?,?,?)";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            ps.setString(2, java.time.LocalTime.now().toString().substring(0, 8));
+            ps.setString(3, type);
+            ps.setBytes(4, snapshotData);
             ps.setString(5, message);
             ps.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
@@ -224,7 +263,7 @@ public class DatabaseManager {
 
     public static List<String[]> getRecentAlertsForRoomByType(int roomId, String type) {
         List<String[]> alerts = new ArrayList<>();
-        String sql = "SELECT timestamp, snapshot_path, message FROM alerts WHERE room_id = ? AND type = ? ORDER BY id DESC LIMIT 10";
+        String sql = "SELECT id, timestamp, message FROM alerts WHERE room_id = ? AND type = ? ORDER BY id DESC LIMIT 10";
         try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, roomId);
             ps.setString(2, type);
@@ -232,12 +271,34 @@ public class DatabaseManager {
             while(rs.next()) {
                 alerts.add(new String[]{
                     rs.getString("timestamp"),
-                    rs.getString("snapshot_path"),
+                    String.valueOf(rs.getInt("id")), // Return ID instead of path
                     rs.getString("message")
                 });
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return alerts;
+    }
+    
+    public static byte[] getAlertSnapshot(int alertId) {
+        String sql = "SELECT snapshot_data FROM alerts WHERE id = ?";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, alertId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getBytes("snapshot_data");
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return null;
+    }
+
+    public static void deleteAlert(int roomId, String timestamp, String type) {
+        String sql = "DELETE FROM alerts WHERE room_id = ? AND timestamp = ? AND type = ?";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            ps.setString(2, timestamp);
+            ps.setString(3, type);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
     }
 
     public static boolean registerUser(String username, String password) {

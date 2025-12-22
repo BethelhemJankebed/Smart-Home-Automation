@@ -28,7 +28,18 @@ public class Camera extends Device {
     private volatile boolean isRunning = false;
     private VideoCapture VC;
 
-
+    // COCO Dataset class names (80 classes, 0-indexed)
+    private static final String[] COCO_CLASSES = {
+        "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
+        "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse",
+        "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie",
+        "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove",
+        "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon",
+        "bowl", "banana", "apple", "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut",
+        "cake", "chair", "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse",
+        "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book",
+        "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
+    };
 
     //models
     private final String faceModel = "src/main/resources/models/face_detection_yunet_2023mar.onnx";
@@ -290,27 +301,24 @@ public class Camera extends Device {
     // FACE DETECTION, RECOGNITION, CHILD SAFETY THREAD
 
     private String getClassName(int classId) {
-        return switch(classId) {
-            case 0 -> "Person";
-            case 43 -> "Knife";
-            case 76 -> "Scissors";
-            case 70 -> "Stove";
-            default -> "Object (" + classId + ")";
-        };
+        if (classId >= 0 && classId < COCO_CLASSES.length) {
+            return COCO_CLASSES[classId];
+        }
+        return "Unknown (" + classId + ")";
     }
 
-    private boolean detectDangerous(Mat frame) {
+    private List<String> detectDangerous(Mat frame) {
+        List<String> detectedObjects = new ArrayList<>();
+        
         if (frame.empty()) {
             System.out.println("⚠ YOLO: Frame is empty");
-            return false;
+            return detectedObjects;
         }
         if (yoloNet == null) {
             System.out.println("⚠ YOLO: Network not loaded");
-            return false;
+            return detectedObjects;
         }
 
-        boolean dangerDetected = false;
-        
         // --- YOLO Pre-processing ---
         Mat blob = Dnn.blobFromImage(frame, 1/255.0, new Size(640, 640), new Scalar(0,0,0), true, false);
         yoloNet.setInput(blob);
@@ -320,7 +328,7 @@ public class Camera extends Device {
         
         if (outputs.isEmpty()) {
             System.out.println("⚠ YOLO: No outputs from network");
-            return false;
+            return detectedObjects;
         }
         
         Mat output = outputs.get(0); // [1, 84, 8400]
@@ -335,7 +343,8 @@ public class Camera extends Device {
         List<Float> confidences = new ArrayList<>();
         List<Integer> classIds = new ArrayList<>();
 
-        float confThreshold = 0.25f; // Lowered for debugging
+        float confThreshold = 0.25f; // General detection threshold
+        float dangerThreshold = 0.15f; // Lower threshold for dangerous objects
 
         int detectionCount = 0;
         for (int i = 0; i < transposed.rows(); i++) {
@@ -345,7 +354,11 @@ public class Camera extends Device {
             float maxScore = (float) mm.maxVal;
             int classId = (int) mm.maxLoc.x;
 
-            if (maxScore > confThreshold) {
+            // Use lower threshold for dangerous objects
+            boolean isDangerous = (classId == 43 || classId == 76 || classId == 69 || classId == 42);
+            float threshold = isDangerous ? dangerThreshold : confThreshold;
+
+            if (maxScore > threshold) {
                 detectionCount++;
                 float cx = (float) row.get(0, 0)[0];
                 float cy = (float) row.get(0, 1)[0];
@@ -362,13 +375,18 @@ public class Camera extends Device {
                 confidences.add(maxScore);
                 classIds.add(classId);
                 
-                // Log ALL detections for debugging
-                System.out.println(String.format("  Detection: Class %d (%s) - Conf: %.2f", 
-                    classId, getClassName(classId), maxScore));
+                // Log dangerous object detections prominently
+                if (isDangerous) {
+                    System.out.println(String.format("  ⚠ DANGEROUS: Class %d (%s) - Conf: %.2f", 
+                        classId, getClassName(classId), maxScore));
+                } else {
+                    System.out.println(String.format("  Detection: Class %d (%s) - Conf: %.2f", 
+                        classId, getClassName(classId), maxScore));
+                }
             }
         }
         
-        System.out.println("ℹ YOLO: Found " + detectionCount + " detections above threshold " + confThreshold);
+        System.out.println("ℹ YOLO: Found " + detectionCount + " detections (danger threshold: " + dangerThreshold + ", general: " + confThreshold + ")");
 
         if (!boxes.isEmpty()) {
             MatOfRect2d boxesMat = new MatOfRect2d();
@@ -380,22 +398,29 @@ public class Camera extends Device {
             confMat.fromArray(confArr);
 
             MatOfInt indices = new MatOfInt();
-            Dnn.NMSBoxes(boxesMat, confMat, confThreshold, 0.45f, indices);
+            // Use lower NMS threshold to keep more dangerous object detections
+            Dnn.NMSBoxes(boxesMat, confMat, dangerThreshold, 0.50f, indices);
 
             for (int idx : indices.toArray()) {
                 int cId = classIds.get(idx);
-                // Dangerous: Knife (43), Scissors (76), Stove (70)
-                if (cId == 43 || cId == 76 || cId == 70) {
-                    dangerDetected = true;
+                // Dangerous objects in COCO dataset:
+                // - Knife: 43, Scissors: 76, Oven: 69, Fork: 42
+                if (cId == 43 || cId == 76 || cId == 69 || cId == 42) {
+                    String objectName = getClassName(cId);
+                    detectedObjects.add(objectName);
+                    
                     Rect2d box = boxes.get(idx);
-                    Imgproc.rectangle(frame, new Point(box.x, box.y), new Point(box.x + box.width, box.y + box.height), new Scalar(0,0,255), 2);
-                    Imgproc.putText(frame, getClassName(cId), new Point(box.x, box.y - 5), Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0,0,255), 1);
-                    System.out.println("⚠ YOLO Detected " + getClassName(cId) + " - Confidence: " + String.format("%.2f", confidences.get(idx)));
+                    // Draw thick red rectangle around dangerous object
+                    Imgproc.rectangle(frame, new Point(box.x, box.y), new Point(box.x + box.width, box.y + box.height), new Scalar(0,0,255), 4);
+                    // Add bold text label above the box
+                    String label = "⚠ " + objectName.toUpperCase() + " ⚠";
+                    Imgproc.putText(frame, label, new Point(box.x, box.y - 10), Imgproc.FONT_HERSHEY_SIMPLEX, 0.7, new Scalar(0,0,255), 3);
+                    System.out.println("🚨 DANGER DETECTED: " + objectName.toUpperCase() + " - Confidence: " + String.format("%.2f", confidences.get(idx)));
                 }
             }
         }
 
-        return dangerDetected;
+        return detectedObjects;
     }
 
     private void startFaceRecognition() {
@@ -486,6 +511,8 @@ public class Camera extends Device {
                         // --- decision ---
                         System.out.println(String.format("DEBUG Match - Best Child: %s (%.3f) | Best Family: %s (%.3f)", 
                             bestChildMatch, bestChildScore, bestFamilyMatch, bestFamilyScore));
+                        System.out.println(String.format("  → Overall Best Match: %s [%s] (%.3f)", 
+                            bestMatch, bestGroup, bestScore));
 
                         if (bestScore < 1.20) {
                             if (linkedRoom != null) {
@@ -501,7 +528,8 @@ public class Camera extends Device {
                 }
 
                 // --- Dangerous object detection ---
-                boolean dangerDetected = detectDangerous(frameClone);
+                List<String> dangerousObjects = detectDangerous(frameClone);
+                boolean dangerDetected = !dangerousObjects.isEmpty();
 
                 // --- Alerts ---
 
@@ -521,14 +549,16 @@ public class Camera extends Device {
                     long nowTime = System.currentTimeMillis();
                     if (nowTime - lastAlertTime.getOrDefault("DANGER", 0L) > 120000) {
                         String personType = childDetected ? "Child" : "Unknown Person";
-                        String msg = personType + " near potential danger in " + name;
+                        // Create specific message with detected objects
+                        String objectsList = String.join(", ", dangerousObjects);
+                        String msg = personType + " near " + objectsList + " in " + name;
                         giveImgWarningToModule("Child", frameClone);
                         String snap = saveSnapshot(frameClone, "DANGER");
                         if (linkedRoom != null) {
                             DatabaseManager.saveAlert(linkedRoom.getId(), "DANGER", snap, msg);
                         }
                         lastAlertTime.put("DANGER", nowTime);
-                        System.out.println("🚨 DANGER Alert fired: " + personType + " is near a dangerous object/stove.");
+                        System.out.println("🚨 DANGER Alert fired: " + msg);
                     }
                 }
                 

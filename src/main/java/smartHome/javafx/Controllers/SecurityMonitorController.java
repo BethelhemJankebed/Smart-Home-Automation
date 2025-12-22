@@ -298,13 +298,12 @@ public class SecurityMonitorController {
         dialog.setContentText("Enter name for this person:");
         
         dialog.showAndWait().ifPresent(name -> {
-            String dirPath = "src/main/resources/faces/" + category.toLowerCase() + "/";
-            String filePath = dirPath + name + ".jpg";
-            File dir = new File(dirPath);
-            if (!dir.exists()) dir.mkdirs();
+            // Convert Mat to byte[] for database storage
+            MatOfByte mob = new MatOfByte();
+            Imgcodecs.imencode(".jpg", frame, mob);
+            byte[] imageData = mob.toArray();
             
-            Imgcodecs.imwrite(filePath, frame);
-            DatabaseManager.registerFace(name, category, filePath);
+            DatabaseManager.registerFace(name, category, imageData);
             if (activeCamera != null) activeCamera.loadKnownFaces();
             showAlert("Success", name + " has been registered as " + category + "!");
         });
@@ -363,10 +362,12 @@ public class SecurityMonitorController {
         cameraSelector.getItems().addAll(cameras);
 
         if (!cameras.isEmpty()) {
-            cameraSelector.setValue(cameras.get(0));
+            // CRITICAL: Set activeCamera BEFORE setValue to prevent race condition
+            // where the event handler fires and sees a different camera
             activeCamera = cameras.get(0);
             activeCamera.setLinkedRoom(room);
             activeCamera.turnOn();
+            cameraSelector.setValue(cameras.get(0));
             System.out.println("Switched to camera: " + activeCamera.getName());
         } else {
             activeCamera = null;
@@ -411,8 +412,6 @@ public class SecurityMonitorController {
                 return;
             }
 
-            if (alertContainer.getChildren().size() == alerts.size()) return;
-
             alertContainer.getChildren().clear();
             for (String[] alert : alerts) {
                 alertContainer.getChildren().add(createAlertCard(alert[0], alert[1], alert[2]));
@@ -425,8 +424,31 @@ public class SecurityMonitorController {
         card.setPadding(new Insets(12));
         card.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 15; -fx-border-color: #cbd5e1; -fx-border-radius: 15;");
         
+        HBox headerRow = new HBox(10);
+        headerRow.setAlignment(Pos.CENTER_LEFT);
+        
         Label tLbl = new Label("🕒 " + time);
         tLbl.setStyle("-fx-font-size: 10px; -fx-font-weight: 900; -fx-text-fill: #3b82f6;");
+        
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        
+        Button deleteBtn = new Button("✕");
+        deleteBtn.setStyle("-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-padding: 2 8; -fx-cursor: hand; -fx-font-size: 12px;");
+        deleteBtn.setOnAction(e -> {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Delete this notification?", ButtonType.YES, ButtonType.NO);
+            confirm.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.YES) {
+                    Room selected = roomSelector.getValue();
+                    if (selected != null) {
+                        DatabaseManager.deleteAlert(selected.getId(), time, "SECURITY");
+                        updateAlertsUI();
+                    }
+                }
+            });
+        });
+        
+        headerRow.getChildren().addAll(tLbl, spacer, deleteBtn);
         
         Label mLbl = new Label(msg);
         mLbl.setWrapText(true);
@@ -448,7 +470,7 @@ public class SecurityMonitorController {
             snapFrame.getChildren().add(iv);
         } catch (Exception e) {}
         
-        card.getChildren().addAll(tLbl, snapFrame, mLbl);
+        card.getChildren().addAll(headerRow, snapFrame, mLbl);
         return card;
     }
 

@@ -220,10 +220,12 @@ public class ChildMonitorController {
         cameraSelector.getItems().addAll(cameras);
 
         if (!cameras.isEmpty()) {
-            cameraSelector.setValue(cameras.get(0));
+            // CRITICAL: Set activeCamera BEFORE setValue to prevent race condition
+            // where the event handler fires and sees a different camera
             activeCamera = cameras.get(0);
             activeCamera.setLinkedRoom(room);
             activeCamera.turnOn();
+            cameraSelector.setValue(cameras.get(0));
             System.out.println("Switched to camera: " + activeCamera.getName());
         } else {
             activeCamera = null;
@@ -261,18 +263,17 @@ public class ChildMonitorController {
         Room selected = roomSelector.getValue();
         if (selected == null || alertContainer == null) return;
 
+        // Only get DANGER alerts (most recent first - already sorted by database)
         List<String[]> alerts = DatabaseManager.getRecentAlertsForRoomByType(selected.getId(), "DANGER");
         
         javafx.application.Platform.runLater(() -> {
             if (alerts.isEmpty()) {
                 alertContainer.getChildren().clear();
-                Label none = new Label("No recent security alerts");
+                Label none = new Label("No recent danger alerts");
                 none.setStyle("-fx-text-fill: #94a3b8; -fx-font-size: 11px; -fx-font-style: italic;");
                 alertContainer.getChildren().add(none);
                 return;
             }
-
-            if (alertContainer.getChildren().size() == alerts.size()) return;
 
             alertContainer.getChildren().clear();
             for (String[] alert : alerts) {
@@ -286,8 +287,31 @@ public class ChildMonitorController {
         card.setPadding(new Insets(12));
         card.setStyle("-fx-background-color: #fff1f2; -fx-background-radius: 15; -fx-border-color: #fecdd3; -fx-border-radius: 15;");
         
+        HBox headerRow = new HBox(10);
+        headerRow.setAlignment(Pos.CENTER_LEFT);
+        
         Label tLbl = new Label("🕒 " + time);
         tLbl.setStyle("-fx-font-size: 10px; -fx-font-weight: 900; -fx-text-fill: #e11d48;");
+        
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        
+        Button deleteBtn = new Button("✕");
+        deleteBtn.setStyle("-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-padding: 2 8; -fx-cursor: hand; -fx-font-size: 12px;");
+        deleteBtn.setOnAction(e -> {
+            javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION, "Delete this notification?", javafx.scene.control.ButtonType.YES, javafx.scene.control.ButtonType.NO);
+            confirm.showAndWait().ifPresent(response -> {
+                if (response == javafx.scene.control.ButtonType.YES) {
+                    Room selected = roomSelector.getValue();
+                    if (selected != null) {
+                        DatabaseManager.deleteAlert(selected.getId(), time, "DANGER");
+                        updateAlertsUI();
+                    }
+                }
+            });
+        });
+        
+        headerRow.getChildren().addAll(tLbl, spacer, deleteBtn);
         
         Label mLbl = new Label(msg);
         mLbl.setWrapText(true);
@@ -309,7 +333,7 @@ public class ChildMonitorController {
             snapFrame.getChildren().add(iv);
         } catch (Exception e) {}
         
-        card.getChildren().addAll(tLbl, snapFrame, mLbl);
+        card.getChildren().addAll(headerRow, snapFrame, mLbl);
         return card;
     }
     
