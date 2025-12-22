@@ -260,7 +260,9 @@ public class Camera extends Device {
                     if (linkedRoom != null) {
                         for (Device device : linkedRoom.getDevices()) {
                             if (device instanceof Light light && light.isLinked()) {
-                                light.turnOn();
+                                if (this.id.equals(light.getLinkedCameraId())) {
+                                    light.turnOn();
+                                }
                             }
                         }
                     }
@@ -274,7 +276,9 @@ public class Camera extends Device {
                      if (linkedRoom != null) {
                         for (Device device : linkedRoom.getDevices()) {
                             if (device instanceof Light light && light.isLinked()) {
-                                light.turnOff();
+                                if (this.id.equals(light.getLinkedCameraId())) {
+                                    light.turnOff();
+                                }
                             }
                         }
                     }

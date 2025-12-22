@@ -121,9 +121,11 @@ public class DatabaseManager {
             // Migration: Add source column if table existed before
             try {
                 stmt.execute("ALTER TABLE devices ADD COLUMN source TEXT;");
-            } catch (SQLException e) {
-                // Column probably already exists, ignore
-            }
+            } catch (SQLException e) { /* ignore */ }
+            // Migration: Add linked_param column for linking devices (e.g. Light -> Camera ID)
+            try {
+                stmt.execute("ALTER TABLE devices ADD COLUMN linked_param TEXT;");
+            } catch (SQLException e) { /* ignore */ }
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
@@ -350,7 +352,7 @@ public class DatabaseManager {
     }
 
     public static void addDevice(Device device, int roomId) {
-        String sql = "INSERT OR REPLACE INTO devices(id, type, name, room_id, state, source) VALUES(?,?,?,?,?,?)";
+        String sql = "INSERT OR REPLACE INTO devices(id, type, name, room_id, state, source, linked_param) VALUES(?,?,?,?,?,?,?)";
         try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, device.getId());
             ps.setString(2, device.getType());
@@ -363,6 +365,12 @@ public class DatabaseManager {
                 source = cam.getStreamSource();
             }
             ps.setString(6, source);
+
+            String linked = null;
+            if (device instanceof Light l) {
+                linked = l.getLinkedCameraId();
+            }
+            ps.setString(7, linked);
             
             ps.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
@@ -381,10 +389,17 @@ public class DatabaseManager {
                 boolean state = rs.getBoolean("state"); // State is mostly runtime, but storing initial state? Or just restoring?
                 
                 String source = rs.getString("source");
+                String linkedParam = rs.getString("linked_param");
                 
                 Device d = null;
                 switch(type) {
-                    case "Light" -> d = new Light(id, name);
+                    case "Light" -> {
+                        Light l = new Light(id, name);
+                        if (linkedParam != null && !linkedParam.isEmpty()) {
+                            l.setLinkedCameraId(linkedParam);
+                        }
+                        d = l;
+                    }
                     case "Fan" -> d = new Fan(id, name);
                     case "DoorLock" -> d = new DoorLock(id, name);
                     case "TV" -> d = new TV(id, name);
@@ -401,6 +416,14 @@ public class DatabaseManager {
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return devices;
+    }
+
+    public static void deleteDevice(String deviceId) {
+        String sql = "DELETE FROM devices WHERE id = ?";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, deviceId);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
     }
 
     public static void logEvent(String deviceId, String type, String details) {

@@ -131,6 +131,16 @@ public class ControlRoomDeviceController {
         if (currentRoom == null) return;
 
         List<Device> devices = DatabaseManager.getDevicesForRoom(currentRoom.getId());
+        
+        // HYDRATE ROOM: Populate the room's device list so Cameras can find Lights
+        currentRoom.getDevices().clear();
+        for (Device d : devices) {
+            currentRoom.addDevice(d);
+            if (d instanceof Camera cam) {
+                cam.setLinkedRoom(currentRoom);
+            }
+        }
+
         for (Device d : devices) {
             devicesContainer.getChildren().add(createDeviceCard(d));
         }
@@ -187,6 +197,15 @@ public class ControlRoomDeviceController {
         String inactiveStyle = "-fx-background-color: #f1f5f9; -fx-text-fill: #94a3b8; -fx-font-weight: 900; -fx-background-radius: 10; -fx-font-size: 10px; -fx-cursor: hand;";
         
         powerBtn.setStyle(d.isOn() ? activeStyle : inactiveStyle);
+        powerBtn.setStyle(d.isOn() ? activeStyle : inactiveStyle);
+        
+        // Listener for external updates (e.g. from Camera)
+        d.setOnStateChanged(() -> javafx.application.Platform.runLater(() -> {
+            boolean on = d.isOn();
+            powerBtn.setSelected(on);
+            powerBtn.setText(on ? "ENABLED" : "DISABLED");
+            powerBtn.setStyle(on ? activeStyle : inactiveStyle);
+        }));
         
         powerBtn.setOnAction(e -> {
             boolean newState = powerBtn.isSelected();
@@ -210,12 +229,89 @@ public class ControlRoomDeviceController {
             settingsBtn.setOnAction(e -> openEditCameraSourceDialog(cam));
         }
 
+        Button deleteBtn = new Button("🗑");
+        deleteBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #ef4444; -fx-font-size: 14px; -fx-cursor: hand;");
+        deleteBtn.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Delete " + d.getName() + "?", ButtonType.YES, ButtonType.NO);
+            alert.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.YES) {
+                    DatabaseManager.deleteDevice(d.getId());
+                    loadDevices(); // Refresh list
+                    DatabaseManager.logEvent("SYS", "Device Deleted", d.getName() + " removed from " + currentRoom.getName());
+                    refreshLogs();
+                }
+            });
+        });
+
+        HBox topRow = new HBox(deleteBtn);
+        topRow.setAlignment(Pos.CENTER_RIGHT);
+
+
         if (settingsBtn != null) {
-            card.getChildren().addAll(iconLabel, titleBox, powerBtn, settingsBtn);
+            card.getChildren().addAll(topRow, iconLabel, titleBox, powerBtn, settingsBtn);
         } else {
-            card.getChildren().addAll(iconLabel, titleBox, powerBtn);
+            // Check if it's a light and we have a camera in the room to link to
+            if (d instanceof Light light) {
+                 Button linkBtn = new Button(light.isLinked() ? "🔗 Linked" : "🔗 Link");
+                 String linkStyle = light.isLinked() 
+                     ? "-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-cursor: hand; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 8;"
+                     : "-fx-background-color: #e2e8f0; -fx-text-fill: #64748b; -fx-cursor: hand; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 8;";
+                 linkBtn.setStyle(linkStyle);
+                 
+                 linkBtn.setOnAction(e -> {
+                     handleLinkLight(light, linkBtn);
+                 });
+                 
+                 card.getChildren().addAll(topRow, iconLabel, titleBox, powerBtn, linkBtn);
+            } else {
+                 card.getChildren().addAll(topRow, iconLabel, titleBox, powerBtn);
+            }
         }
         return card;
+    }
+    
+    private void handleLinkLight(Light light, Button btn) {
+        // Find cameras in this room
+        List<Camera> cameras = new java.util.ArrayList<>();
+        if (currentRoom != null) {
+            for (Device d : currentRoom.getDevices()) {
+                if (d instanceof Camera c) cameras.add(c);
+            }
+        }
+        
+        if (cameras.isEmpty()) {
+            Alert a = new Alert(Alert.AlertType.WARNING, "No cameras found in this room to link.");
+            a.show();
+            return;
+        }
+        
+        if (light.isLinked()) {
+            // Unlink
+            light.unlinkCamera();
+            DatabaseManager.addDevice(light, currentRoom.getId());
+            btn.setText("🔗 Link");
+            btn.setStyle("-fx-background-color: #e2e8f0; -fx-text-fill: #64748b; -fx-cursor: hand; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 8;");
+            DatabaseManager.logEvent(light.getId(), "LINK", "Unlinked from camera");
+        } else {
+            // Link
+            Camera target = cameras.get(0); // Default to first
+            if (cameras.size() > 1) {
+                // ChoiceDialog if multiple
+                ChoiceDialog<Camera> dialog = new ChoiceDialog<>(cameras.get(0), cameras);
+                dialog.setTitle("Select Camera");
+                dialog.setHeaderText("Link " + light.getName() + " to which camera?");
+                dialog.setContentText("Camera:");
+                java.util.Optional<Camera> result = dialog.showAndWait();
+                if (result.isPresent()) target = result.get(); else return;
+            }
+            
+            light.setLinkedCameraId(target.getId());
+            DatabaseManager.addDevice(light, currentRoom.getId());
+            btn.setText("🔗 Linked");
+            btn.setStyle("-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-cursor: hand; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 8;");
+            DatabaseManager.logEvent(light.getId(), "LINK", "Linked to camera " + target.getName());
+        }
+        refreshLogs();
     }
 
     private void openAddDeviceDialog() {
