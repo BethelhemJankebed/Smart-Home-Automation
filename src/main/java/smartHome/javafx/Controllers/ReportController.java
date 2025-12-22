@@ -2,11 +2,17 @@ package smartHome.javafx.Controllers;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import smartHome.app.ReportManager;
+import smartHome.db.DatabaseManager;
 import smartHome.javafx.Scene.SceneManager;
 import java.util.List;
+import java.util.Map;
 
 public class ReportController {
 
@@ -28,28 +34,102 @@ public class ReportController {
         Button backBtn = new Button("← Back");
         backBtn.setOnAction(e -> SceneManager.switchScene("Dashboard"));
 
-        Label title = new Label("Admin Reports");
+        Label title = new Label("Admin Reports & Analytics");
         title.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
         header.getChildren().addAll(backBtn, title);
-
-        // Buttons
-        HBox actions = new HBox(15);
-        Button btnAllEvents = new Button("All Events");
-        btnAllEvents.setOnAction(e -> showAllEvents());
         
-        Button btnSummary = new Button("Summary");
-        btnSummary.setOnAction(e -> showSummary());
+        TabPane tabs = new TabPane();
+        tabs.setStyle("-fx-background-color: transparent;");
+        
+        Tab tabLogs = new Tab("Event Logs");
+        tabLogs.setClosable(false);
+        tabLogs.setContent(createLogView());
+        
+        Tab tabCharts = new Tab("Analytics Graphs");
+        tabCharts.setClosable(false);
+        tabCharts.setContent(createAnalyticsView());
+        
+        tabs.getTabs().addAll(tabCharts, tabLogs);
 
-        actions.getChildren().addAll(btnAllEvents, btnSummary);
+        root.getChildren().addAll(header, tabs);
+    }
 
-        // Report Area
+    private VBox createLogView() {
+        VBox box = new VBox(10);
+        box.setPadding(new Insets(15));
+        
+        Button refresh = new Button("Refresh Logs");
+        refresh.setOnAction(e -> showAllEvents());
+        
         reportArea = new TextArea();
         reportArea.setEditable(false);
         reportArea.setPrefHeight(400);
         reportArea.setStyle("-fx-font-family: 'Consolas', monospace;");
+        
+        box.getChildren().addAll(refresh, reportArea);
+        
+        // Initial load
+        showAllEvents();
+        return box;
+    }
 
-        root.getChildren().addAll(header, actions, reportArea);
+    private VBox createAnalyticsView() {
+        VBox box = new VBox(15);
+        box.setPadding(new Insets(15));
+        box.setAlignment(Pos.CENTER);
+        
+        HBox periodSelector = new HBox(10);
+        periodSelector.setAlignment(Pos.CENTER);
+        ToggleGroup group = new ToggleGroup();
+        
+        ToggleButton btnDaily = new ToggleButton("Daily");
+        btnDaily.setToggleGroup(group);
+        btnDaily.setSelected(true);
+        
+        ToggleButton btnWeekly = new ToggleButton("Weekly");
+        btnWeekly.setToggleGroup(group);
+        
+        ToggleButton btnMonthly = new ToggleButton("Monthly");
+        btnMonthly.setToggleGroup(group);
+        
+        periodSelector.getChildren().addAll(new Label("Period:"), btnDaily, btnWeekly, btnMonthly);
+        
+        // Chart
+        CategoryAxis xAxis = new CategoryAxis();
+        NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Event Type");
+        yAxis.setLabel("Count");
+        
+        BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
+        barChart.setTitle("System Events");
+        barChart.setLegendVisible(false);
+        
+        Runnable updateChart = () -> {
+            String period = "Daily";
+            if (btnWeekly.isSelected()) period = "Weekly";
+            if (btnMonthly.isSelected()) period = "Monthly";
+            
+            barChart.getData().clear();
+            XYChart.Series<String, Number> series = new XYChart.Series<>();
+            
+            Map<String, Integer> data = DatabaseManager.getEventCounts(period);
+            for (Map.Entry<String, Integer> entry : data.entrySet()) {
+                series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+            }
+            
+            barChart.getData().add(series);
+        };
+        
+        btnDaily.setOnAction(e -> updateChart.run());
+        btnWeekly.setOnAction(e -> updateChart.run());
+        btnMonthly.setOnAction(e -> updateChart.run());
+        
+        // Initial load
+        updateChart.run();
+        
+        box.getChildren().addAll(periodSelector, barChart);
+        return box;
     }
 
     public VBox getView() {
@@ -64,10 +144,5 @@ public class ReportController {
             sb.append(e).append("\n");
         }
         reportArea.setText(sb.toString());
-    }
-
-    private void showSummary() {
-        String summary = reportManager.generateSummaryReport();
-        reportArea.setText("--- Summary Report ---\n" + summary);
     }
 }

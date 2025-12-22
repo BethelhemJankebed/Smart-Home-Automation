@@ -18,7 +18,7 @@ import org.opencv.core.Scalar;
 
 import smartHome.db.DatabaseManager;
 
-import java.io.File;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -135,43 +135,7 @@ public class Camera extends Device {
     // LOAD KNOWN FACES
     // ==========================================================
 
-    private void loadFacesFromFiles(File[] files, HashMap<String, Mat> knownEmbeddings){
 
-        if (files == null || files.length == 0) {
-            System.out.println("⚠ No known faces in /Faces folder");
-            return;
-        }
-
-        Size size = new Size(320, 320);
-        FaceDetectorYN detector = FaceDetectorYN.create(faceModel, "", size);
-        detector.setInputSize(size);
-        FaceRecognizerSF recognizer = FaceRecognizerSF.create(recogModel, "");
-
-        for (File f : files) {
-            Mat img = Imgcodecs.imread(f.getAbsolutePath());
-            if (img.empty()) continue;
-
-            // Simple blunt resize to match live recognition
-            Mat resized = new Mat();
-            Imgproc.resize(img, resized, size);
-
-            Mat detections = new Mat();
-            detector.detect(resized, detections);
-
-            if (detections.rows() == 0) continue;
-
-            Mat aligned = new Mat();
-            Mat embedding = new Mat();
-
-            recognizer.alignCrop(resized, detections.row(0), aligned);
-            recognizer.feature(aligned, embedding);
-
-            String person = f.getName().split("\\.")[0];
-            knownEmbeddings.put(person, embedding);
-
-            System.out.println("✔ Loaded face: " + person);
-        }
-    }
 
     // MODULE WARNING SYSTEM
 
@@ -193,13 +157,50 @@ public class Camera extends Device {
         familyknownEmbeddings.clear();
         childknownEmbeddings.clear();
 
-        File family_dir = new File("src/main/resources/faces/family");
-        File[] family_files = family_dir.listFiles();
-        loadFacesFromFiles(family_files, familyknownEmbeddings);
+        List<Object[]> faces = DatabaseManager.getAllRegisteredFacesWithData();
+        
+        Size size = new Size(320, 320);
+        FaceDetectorYN detector = FaceDetectorYN.create(faceModel, "", size);
+        detector.setInputSize(size);
+        FaceRecognizerSF recognizer = FaceRecognizerSF.create(recogModel, "");
 
-        File child_dir = new File("src/main/resources/faces/child");
-        File[] child_files = child_dir.listFiles();
-        loadFacesFromFiles(child_files, childknownEmbeddings);
+        if (faces.isEmpty()) {
+            System.out.println("⚠ No faces found in database");
+            return;
+        }
+
+        for (Object[] face : faces) {
+            String name = (String) face[0];
+            String category = (String) face[1];
+            byte[] data = (byte[]) face[2];
+
+            if (data == null || data.length == 0) continue;
+
+            Mat img = Imgcodecs.imdecode(new MatOfByte(data), Imgcodecs.IMREAD_COLOR);
+            if (img.empty()) continue;
+
+            Mat resized = new Mat();
+            Imgproc.resize(img, resized, size);
+
+            Mat detections = new Mat();
+            detector.detect(resized, detections);
+
+            if (detections.rows() == 0) continue;
+
+            Mat aligned = new Mat();
+            Mat embedding = new Mat();
+
+            recognizer.alignCrop(resized, detections.row(0), aligned);
+            recognizer.feature(aligned, embedding);
+
+            if ("CHILD".equalsIgnoreCase(category)) {
+                childknownEmbeddings.put(name, embedding);
+            } else {
+                familyknownEmbeddings.put(name, embedding);
+            }
+            
+            System.out.println("✔ Loaded face from DB: " + name + " (" + category + ")");
+        }
         
         System.out.println("ℹ System Memory: " + familyknownEmbeddings.size() + " Family, " + childknownEmbeddings.size() + " Children loaded.");
     }
@@ -285,16 +286,10 @@ public class Camera extends Device {
         }).start();
     }
 
-    public String saveSnapshot(Mat frame, String type) {
-        String filename = "snapshot_" + System.currentTimeMillis() + ".jpg";
-        String path = "src/main/resources/snapshots/" + filename;
-        File dir = new File("src/main/resources/snapshots/");
-        if (!dir.exists()) dir.mkdirs();
-        
-        Imgcodecs.imwrite(path, frame);
-        DatabaseManager.logEvent(this.id, type, "Snapshot captured for " + type);
-        System.out.println("Snapshot saved: " + path);
-        return filename;
+    public byte[] captureSnapshot(Mat frame) {
+        MatOfByte buffer = new MatOfByte();
+        Imgcodecs.imencode(".jpg", frame, buffer);
+        return buffer.toArray();
     }
 
 
@@ -405,7 +400,8 @@ public class Camera extends Device {
                 int cId = classIds.get(idx);
                 // Dangerous objects in COCO dataset:
                 // - Knife: 43, Scissors: 76, Oven: 69, Fork: 42
-                if (cId == 43 || cId == 76 || cId == 69 || cId == 42) {
+                if (cId == 43 || cId == 76 || cId == 69 || cId == 42 || cId == 68 || cId == 70) { 
+                    // Knife(43), Scissors(76), Oven(69), Fork(42), Microwave(68), Toaster(70)
                     String objectName = getClassName(cId);
                     detectedObjects.add(objectName);
                     
@@ -537,9 +533,9 @@ public class Camera extends Device {
                     long nowTime = System.currentTimeMillis();
                     if (nowTime - lastAlertTime.getOrDefault("SECURITY", 0L) > 120000) {
                         giveImgWarningToModule("Security", frameClone);
-                        String snap = saveSnapshot(frameClone, "UNKNOWN_PERSON");
+                        byte[] snap = captureSnapshot(frameClone);
                         if (linkedRoom != null) {
-                            DatabaseManager.saveAlert(linkedRoom.getId(), "SECURITY", snap, "Unknown person detected in " + name);
+                            DatabaseManager.saveAlertWithBlob(linkedRoom.getId(), "SECURITY", snap, "Unknown person detected in " + name);
                         }
                         lastAlertTime.put("SECURITY", nowTime);
                     }
@@ -553,9 +549,9 @@ public class Camera extends Device {
                         String objectsList = String.join(", ", dangerousObjects);
                         String msg = personType + " near " + objectsList + " in " + name;
                         giveImgWarningToModule("Child", frameClone);
-                        String snap = saveSnapshot(frameClone, "DANGER");
+                        byte[] snap = captureSnapshot(frameClone);
                         if (linkedRoom != null) {
-                            DatabaseManager.saveAlert(linkedRoom.getId(), "DANGER", snap, msg);
+                            DatabaseManager.saveAlertWithBlob(linkedRoom.getId(), "DANGER", snap, msg);
                         }
                         lastAlertTime.put("DANGER", nowTime);
                         System.out.println("🚨 DANGER Alert fired: " + msg);

@@ -41,7 +41,7 @@ public class DatabaseManager {
         try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, person);
             ps.setInt(2, roomId);
-            ps.setString(3, java.time.LocalTime.now().toString().substring(0, 5));
+            ps.setString(3, java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
             ps.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
     }
@@ -144,7 +144,6 @@ public class DatabaseManager {
                      "room_id INTEGER," +
                      "timestamp TEXT," +
                      "type TEXT," +
-                     "snapshot_path TEXT," +
                      "snapshot_data BLOB," +
                      "message TEXT" +
                      ");";
@@ -153,9 +152,13 @@ public class DatabaseManager {
             // Add snapshot_data column if it doesn't exist (for existing databases)
             try {
                 stmt.execute("ALTER TABLE alerts ADD COLUMN snapshot_data BLOB");
-            } catch (SQLException e) {
-                // Column already exists, ignore
-            }
+            } catch (SQLException e) { /* Column exists */ }
+            
+            // CLEANUP: Remove legacy alerts that have no blob data
+            try {
+                stmt.execute("DELETE FROM alerts WHERE snapshot_data IS NULL");
+            } catch (SQLException e) { /* ignore */ }
+            
         } catch (SQLException e) { 
             e.printStackTrace(); 
         }
@@ -164,7 +167,6 @@ public class DatabaseManager {
                      "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                      "name TEXT UNIQUE NOT NULL," +
                      "category TEXT NOT NULL," +
-                     "image_path TEXT," +
                      "image_data BLOB" +
                      ");";
         try (Connection conn = connect(); Statement stmt = conn.createStatement()) { 
@@ -172,9 +174,13 @@ public class DatabaseManager {
             // Add image_data column if it doesn't exist (for existing databases)
             try {
                 stmt.execute("ALTER TABLE registered_faces ADD COLUMN image_data BLOB");
-            } catch (SQLException e) {
-                // Column already exists, ignore
-            }
+            } catch (SQLException e) { /* Column exists */ }
+            
+            // CLEANUP: Remove legacy faces that have no blob data (like 'Bettychild' from user screenshot)
+            try {
+                stmt.execute("DELETE FROM registered_faces WHERE image_data IS NULL");
+            } catch (SQLException e) { /* ignore */ }
+            
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
@@ -223,7 +229,7 @@ public class DatabaseManager {
         String sql = "INSERT INTO alerts(room_id, timestamp, type, snapshot_path, message) VALUES(?,?,?,?,?)";
         try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, roomId);
-            ps.setString(2, java.time.LocalTime.now().toString().substring(0, 8));
+            ps.setString(2, java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
             ps.setString(3, type);
             ps.setString(4, path);
             ps.setString(5, message);
@@ -236,7 +242,7 @@ public class DatabaseManager {
         String sql = "INSERT INTO alerts(room_id, timestamp, type, snapshot_data, message) VALUES(?,?,?,?,?)";
         try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, roomId);
-            ps.setString(2, java.time.LocalTime.now().toString().substring(0, 8));
+            ps.setString(2, java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
             ps.setString(3, type);
             ps.setBytes(4, snapshotData);
             ps.setString(5, message);
@@ -244,22 +250,7 @@ public class DatabaseManager {
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    public static List<String[]> getRecentAlertsForRoom(int roomId) {
-        List<String[]> alerts = new ArrayList<>();
-        String sql = "SELECT timestamp, snapshot_path, message FROM alerts WHERE room_id = ? ORDER BY id DESC LIMIT 10";
-        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, roomId);
-            ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
-                alerts.add(new String[]{
-                    rs.getString("timestamp"),
-                    rs.getString("snapshot_path"),
-                    rs.getString("message")
-                });
-            }
-        } catch (SQLException e) { e.printStackTrace(); }
-        return alerts;
-    }
+
 
     public static List<String[]> getRecentAlertsForRoomByType(int roomId, String type) {
         List<String[]> alerts = new ArrayList<>();
@@ -417,7 +408,7 @@ public class DatabaseManager {
         try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, deviceId);
             ps.setString(2, type);
-            ps.setString(3, java.time.LocalTime.now().toString().substring(0, 8)); // Store HH:mm:ss
+            ps.setString(3, java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
             ps.setString(4, details);
             ps.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
@@ -484,15 +475,83 @@ public class DatabaseManager {
 
     public static List<String> getEvents(String filter) {
         List<String> events = new ArrayList<>();
-        String sql = "SELECT * FROM camera_events"; // Should apply filter if complex, but for now simple dump
+        String sql = "SELECT * FROM events ORDER BY id DESC LIMIT 50";
         try (Connection conn = connect(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                String event = "ID: " + rs.getInt("id") + ", Camera: " + rs.getString("camera_id") + 
-                               ", Type: " + rs.getString("type") + ", Time: " + rs.getString("timestamp");
+                String event = "ID: " + rs.getInt("id") + ", Dev: " + rs.getString("device_id") + 
+                               ", Type: " + rs.getString("type") + ", Time: " + rs.getString("timestamp") +
+                               ", Details: " + rs.getString("details");
                 events.add(event);
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return events;
+    }
+    
+    public static void updateDeviceState(String deviceId, boolean state) {
+        String sql = "UPDATE devices SET state = ? WHERE id = ?";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setBoolean(1, state);
+            ps.setString(2, deviceId);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+    
+    public static List<Object[]> getAllRegisteredFacesWithData() {
+        List<Object[]> faces = new ArrayList<>();
+        String sql = "SELECT name, category, image_data FROM registered_faces";
+        try (Connection conn = connect(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                faces.add(new Object[]{
+                    rs.getString("name"), 
+                    rs.getString("category"),
+                    rs.getBytes("image_data")
+                });
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return faces;
+    }
+
+    public static java.util.Map<String, Integer> getEventCounts(String period) {
+        java.util.Map<String, Integer> data = new java.util.HashMap<>();
+        String sql = "SELECT type, COUNT(*) as c FROM events WHERE timestamp LIKE ? GROUP BY type";
+        
+        String pattern = "%"; // Default all time
+        java.time.LocalDate now = java.time.LocalDate.now();
+        
+        if ("Daily".equalsIgnoreCase(period)) {
+            pattern = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")) + "%";
+        } else if ("Monthly".equalsIgnoreCase(period)) {
+            pattern = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")) + "%";
+        }
+
+        if ("Weekly".equalsIgnoreCase(period)) {
+            sql = "SELECT type, timestamp FROM events"; // Fetch all to filter
+             try (Connection conn = connect(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+                java.time.LocalDateTime weekAgo = java.time.LocalDateTime.now().minusDays(7);
+                while(rs.next()) {
+                    String ts = rs.getString("timestamp");
+                    try {
+                        if (ts.length() > 8) { 
+                             java.time.LocalDateTime t = java.time.LocalDateTime.parse(ts, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                             if (t.isAfter(weekAgo)) {
+                                 String tType = rs.getString("type");
+                                 data.put(tType, data.getOrDefault(tType, 0) + 1);
+                             }
+                        }
+                    } catch (Exception e) {}
+                }
+            } catch (SQLException e) { e.printStackTrace(); }
+            return data;
+        }
+
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, pattern);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                data.put(rs.getString("type"), rs.getInt("c"));
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return data;
     }
 }
 

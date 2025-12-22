@@ -22,7 +22,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import javafx.stage.FileChooser;
 
@@ -219,14 +218,10 @@ public class SecurityMonitorController {
                             // 1. Delete from database
                             DatabaseManager.deleteFace(face[0]);
                             
-                            // 2. Delete from filesystem
-                            File f = new File(face[2]);
-                            if (f.exists()) f.delete();
-                            
-                            // 3. Reload embeddings
+                            // 2. Reload embeddings
                             if (activeCamera != null) activeCamera.loadKnownFaces();
                             
-                            // 4. Refresh dialog content (naive way: close and reopen or just remove row)
+                            // 3. Refresh dialog content (naive way: close and reopen or just remove row)
                             row.setVisible(false);
                             row.setManaged(false);
                             showAlert("Success", face[0] + " has been deleted.");
@@ -324,20 +319,13 @@ public class SecurityMonitorController {
             dialog.setContentText("Enter name for this " + category + " person:");
 
             dialog.showAndWait().ifPresent(name -> {
-                String extension = selectedFile.getName().substring(selectedFile.getName().lastIndexOf("."));
-                String dirPath = "src/main/resources/faces/" + category.toLowerCase() + "/";
-                String filePath = dirPath + name + extension;
-                File dest = new File(filePath);
-                File dir = new File(dirPath);
-                if (!dir.exists()) dir.mkdirs();
-
                 try {
-                    Files.copy(selectedFile.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    DatabaseManager.registerFace(name, category, filePath);
+                    byte[] imageData = Files.readAllBytes(selectedFile.toPath());
+                    DatabaseManager.registerFace(name, category, imageData);
                     if (activeCamera != null) activeCamera.loadKnownFaces();
                     showAlert("Success", name + " has been registered as " + category + " from file!");
                 } catch (IOException e) {
-                    showAlert("Error", "Failed to copy file: " + e.getMessage());
+                    showAlert("Error", "Failed to read file: " + e.getMessage());
                 }
             });
         }
@@ -457,18 +445,24 @@ public class SecurityMonitorController {
         VBox snapFrame = new VBox();
         snapFrame.setAlignment(Pos.CENTER);
         try {
-            String fullPath = new File("src/main/resources/snapshots/" + path).toURI().toString();
-            Image img = new Image(fullPath, 250, 0, true, true);
-            ImageView iv = new ImageView(img);
-            iv.setFitWidth(240);
-            iv.setPreserveRatio(true);
+            int alertId = Integer.parseInt(path);
+            byte[] imgData = DatabaseManager.getAlertSnapshot(alertId);
             
-            Rectangle snclip = new Rectangle(240, 140);
-            snclip.setArcWidth(20);
-            snclip.setArcHeight(20);
-            iv.setClip(snclip);
-            snapFrame.getChildren().add(iv);
-        } catch (Exception e) {}
+            if (imgData != null && imgData.length > 0) {
+                Image img = new Image(new ByteArrayInputStream(imgData), 250, 0, true, true);
+                ImageView iv = new ImageView(img);
+                iv.setFitWidth(240);
+                iv.setPreserveRatio(true);
+                
+                Rectangle snclip = new Rectangle(240, 140);
+                snclip.setArcWidth(20);
+                snclip.setArcHeight(20);
+                iv.setClip(snclip);
+                snapFrame.getChildren().add(iv);
+            }
+        } catch (Exception e) { 
+            e.printStackTrace(); 
+        }
         
         card.getChildren().addAll(headerRow, snapFrame, mLbl);
         return card;

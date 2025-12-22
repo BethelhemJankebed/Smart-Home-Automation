@@ -20,7 +20,7 @@ import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
+
 import java.util.List;
 
 public class ChildMonitorController {
@@ -320,18 +320,24 @@ public class ChildMonitorController {
         VBox snapFrame = new VBox();
         snapFrame.setAlignment(Pos.CENTER);
         try {
-            String fullPath = new File("src/main/resources/snapshots/" + path).toURI().toString();
-            Image img = new Image(fullPath, 250, 0, true, true);
-            ImageView iv = new ImageView(img);
-            iv.setFitWidth(240);
-            iv.setPreserveRatio(true);
+            int alertId = Integer.parseInt(path);
+            byte[] imgData = DatabaseManager.getAlertSnapshot(alertId);
             
-            Rectangle snclip = new Rectangle(240, 140);
-            snclip.setArcWidth(20);
-            snclip.setArcHeight(20);
-            iv.setClip(snclip);
-            snapFrame.getChildren().add(iv);
-        } catch (Exception e) {}
+            if (imgData != null && imgData.length > 0) {
+                Image img = new Image(new ByteArrayInputStream(imgData), 250, 0, true, true);
+                ImageView iv = new ImageView(img);
+                iv.setFitWidth(240);
+                iv.setPreserveRatio(true);
+                
+                Rectangle snclip = new Rectangle(240, 140);
+                snclip.setArcWidth(20);
+                snclip.setArcHeight(20);
+                iv.setClip(snclip);
+                snapFrame.getChildren().add(iv);
+            }
+        } catch (Exception e) { 
+            e.printStackTrace();
+        }
         
         card.getChildren().addAll(headerRow, snapFrame, mLbl);
         return card;
