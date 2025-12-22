@@ -42,4 +42,9 @@ public abstract class Device {
             onStateChangedListener.run();
         }
     }
+
+    @Override
+    public String toString() {
+        return name;
+    }
 }

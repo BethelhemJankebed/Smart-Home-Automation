@@ -179,8 +179,17 @@ public class ControlRoomDeviceController {
             default -> "⚙️";
         };
 
+        String color = switch(d.getType()) {
+            case "Light" -> "#f59e0b"; // Amber
+            case "Fan" -> "#3b82f6";   // Blue
+            case "TV" -> "#8b5cf6";    // Violet
+            case "DoorLock" -> "#14b8a6"; // Teal
+            case "Camera" -> "#f43f5e"; // Rose
+            default -> "#64748b";       // Slate
+        };
+
         Label iconLabel = new Label(icon);
-        iconLabel.setStyle("-fx-font-size: 36px;");
+        iconLabel.setStyle("-fx-font-size: 36px; -fx-text-fill: " + color + "; -fx-effect: dropshadow(gaussian, " + color + "40, 10, 0, 0, 4);");
 
         VBox titleBox = new VBox(2);
         titleBox.setAlignment(Pos.CENTER);

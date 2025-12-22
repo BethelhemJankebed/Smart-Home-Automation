@@ -104,11 +104,23 @@ public class ControlHomeAppliancesController {
         HBox topRow = new HBox();
         topRow.setAlignment(Pos.CENTER_LEFT);
         
+        String color = switch(icon != null ? icon : "") {
+            case "🍳" -> "#f97316"; // Orange
+            case "🛏" -> "#6366f1"; // Indigo
+            case "🚿" -> "#06b6d4"; // Cyan
+            case "🧒" -> "#ec4899"; // Pink
+            case "📺" -> "#8b5cf6"; // Violet
+            case "🧺" -> "#eab308"; // Yellow
+            case "🚗" -> "#ef4444"; // Red
+            case "🌳" -> "#22c55e"; // Green
+            default -> "#3b82f6";   // Blue
+        };
+
         StackPane iconPane = new StackPane();
         Circle circle = new Circle(26);
-        circle.setStyle("-fx-fill: #f1f5f9;");
+        circle.setStyle("-fx-fill: " + color + "20;"); // Tinted background
         Label iconLabel = new Label(icon != null ? icon : "🏠");
-        iconLabel.setStyle("-fx-font-size: 26px;");
+        iconLabel.setStyle("-fx-font-size: 26px; -fx-text-fill: " + color + ";");
         iconPane.getChildren().addAll(circle, iconLabel);
         
         Region s = new Region();
