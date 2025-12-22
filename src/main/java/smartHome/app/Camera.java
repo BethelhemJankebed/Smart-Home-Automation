@@ -159,9 +159,7 @@ public class Camera extends Device {
 
         List<Object[]> faces = DatabaseManager.getAllRegisteredFacesWithData();
         
-        Size size = new Size(320, 320);
-        FaceDetectorYN detector = FaceDetectorYN.create(faceModel, "", size);
-        detector.setInputSize(size);
+        FaceDetectorYN detector = FaceDetectorYN.create(faceModel, "", new Size(320, 320));
         FaceRecognizerSF recognizer = FaceRecognizerSF.create(recogModel, "");
 
         if (faces.isEmpty()) {
@@ -179,18 +177,19 @@ public class Camera extends Device {
             Mat img = Imgcodecs.imdecode(new MatOfByte(data), Imgcodecs.IMREAD_COLOR);
             if (img.empty()) continue;
 
-            Mat resized = new Mat();
-            Imgproc.resize(img, resized, size);
+            // Detect on ORIGINAL image to avoid aspect ratio distortion
+            detector.setInputSize(new Size(img.cols(), img.rows()));
 
             Mat detections = new Mat();
-            detector.detect(resized, detections);
+            detector.detect(img, detections);
 
             if (detections.rows() == 0) continue;
 
             Mat aligned = new Mat();
             Mat embedding = new Mat();
 
-            recognizer.alignCrop(resized, detections.row(0), aligned);
+            // Align from original image
+            recognizer.alignCrop(img, detections.row(0), aligned);
             recognizer.feature(aligned, embedding);
 
             if ("CHILD".equalsIgnoreCase(category)) {
@@ -429,7 +428,8 @@ public class Camera extends Device {
 
 
             Mat frame = new Mat();
-            Size inputSize = new Size(320, 320); // YuNet input size
+            // Use 320x240 (4:3) to match camera aspect ratio and avoid squash distortion
+            Size inputSize = new Size(320, 240); 
 
             FaceDetectorYN detector = FaceDetectorYN.create(faceModel, "", inputSize);
             detector.setInputSize(inputSize);
@@ -510,7 +510,7 @@ public class Camera extends Device {
                         System.out.println(String.format("  → Overall Best Match: %s [%s] (%.3f)", 
                             bestMatch, bestGroup, bestScore));
 
-                        if (bestScore < 1.20) {
+                        if (bestScore < 1.25) { // Relaxed threshold slightly
                             if (linkedRoom != null) {
                                 DatabaseManager.updateLocation(bestMatch, linkedRoom.getId());
                             }
@@ -531,7 +531,7 @@ public class Camera extends Device {
 
                 if (unknownDetected) {
                     long nowTime = System.currentTimeMillis();
-                    if (nowTime - lastAlertTime.getOrDefault("SECURITY", 0L) > 120000) {
+                    if (nowTime - lastAlertTime.getOrDefault("SECURITY", 0L) > 5000) {
                         giveImgWarningToModule("Security", frameClone);
                         byte[] snap = captureSnapshot(frameClone);
                         if (linkedRoom != null) {
@@ -543,7 +543,7 @@ public class Camera extends Device {
 
                 if (dangerDetected && (childDetected || unknownDetected)) {
                     long nowTime = System.currentTimeMillis();
-                    if (nowTime - lastAlertTime.getOrDefault("DANGER", 0L) > 120000) {
+                    if (nowTime - lastAlertTime.getOrDefault("DANGER", 0L) > 5000) {
                         String personType = childDetected ? "Child" : "Unknown Person";
                         // Create specific message with detected objects
                         String objectsList = String.join(", ", dangerousObjects);
