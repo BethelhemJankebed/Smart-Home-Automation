@@ -540,6 +540,7 @@ public class Camera extends Device {
                         byte[] snap = captureSnapshot(frameClone);
                         if (linkedRoom != null) {
                             DatabaseManager.saveAlertWithBlob(linkedRoom.getId(), "SECURITY", snap, "Unknown person detected in " + name);
+                            DatabaseManager.logSystemActivity("Security", "Unknown person detected: " + name, "CRITICAL");
                         }
                         lastAlertTime.put("SECURITY", nowTime);
                     }
@@ -556,6 +557,7 @@ public class Camera extends Device {
                         byte[] snap = captureSnapshot(frameClone);
                         if (linkedRoom != null) {
                             DatabaseManager.saveAlertWithBlob(linkedRoom.getId(), "DANGER", snap, msg);
+                            DatabaseManager.logSystemActivity("Child Monitor", msg, "CRITICAL");
                         }
                         lastAlertTime.put("DANGER", nowTime);
                         System.out.println("🚨 DANGER Alert fired: " + msg);

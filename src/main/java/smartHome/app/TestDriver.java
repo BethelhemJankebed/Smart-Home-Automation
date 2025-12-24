@@ -154,14 +154,15 @@ public class TestDriver {
         System.out.println("Displaying the last 10 system logs:");
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:users.db");
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT * FROM system_logs ORDER BY id DESC LIMIT 10")) {
+             ResultSet rs = stmt.executeQuery("SELECT * FROM events WHERE module IS NOT NULL ORDER BY id DESC LIMIT 10")) {
             
             System.out.println("TIME | MODULE | EVENT | LEVEL");
             System.out.println("------------------------------------");
             while (rs.next()) {
-                String ts = rs.getString("timestamp").substring(11, 16); // HH:mm
+                String fullTs = rs.getString("timestamp");
+                String ts = (fullTs != null && fullTs.length() >= 16) ? fullTs.substring(11, 16) : "??:??";
                 System.out.printf("%s | %s | %s | %s\n", 
-                    ts, rs.getString("module"), rs.getString("event"), rs.getString("level"));
+                    ts, rs.getString("module"), rs.getString("details"), rs.getString("level"));
             }
         } catch (Exception e) { e.printStackTrace(); }
         System.out.println("\nPress Enter to return...");
@@ -179,8 +180,8 @@ public class TestDriver {
         if (choice.equals("1")) {
             try (Connection conn = DriverManager.getConnection("jdbc:sqlite:users.db");
                  Statement stmt = conn.createStatement()) {
-                stmt.execute("DELETE FROM system_logs;");
-                System.out.println("Logs cleared.");
+                stmt.execute("DELETE FROM events WHERE module IS NOT NULL;");
+                System.out.println("Module logs cleared.");
                 DatabaseManager.logSystemActivity("Maintenance", "Logs cleared by user", "INFO");
             } catch (Exception e) { e.printStackTrace(); }
         }

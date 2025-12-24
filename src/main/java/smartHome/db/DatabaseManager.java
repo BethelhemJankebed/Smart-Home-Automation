@@ -68,7 +68,7 @@ public class DatabaseManager {
     }
 
 
-    private static Connection connect() throws SQLException {
+    public static Connection connect() throws SQLException {
         return DriverManager.getConnection(DB_URL);
     }
 
@@ -121,19 +121,6 @@ public class DatabaseManager {
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    private static void createSystemLogsTable() {
-        String sql = "CREATE TABLE IF NOT EXISTS system_logs (" +
-                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                     "timestamp TEXT," +
-                     "module TEXT," +
-                     "event TEXT," +
-                     "level TEXT" +
-                     ");";
-        try (Connection conn = connect(); Statement stmt = conn.createStatement()) { 
-            stmt.execute(sql); 
-        } catch (SQLException e) { e.printStackTrace(); }
-    }
-
     // Call this in static block
     static {
         createUsersTable();
@@ -143,11 +130,10 @@ public class DatabaseManager {
         createLocationsTable();
         createAlertsTable();
         createFaceTable();
-        createSystemLogsTable();
     }
 
     public static void logSystemActivity(String module, String event, String level) {
-        String sql = "INSERT INTO system_logs(timestamp, module, event, level) VALUES(?,?,?,?)";
+        String sql = "INSERT INTO events(timestamp, module, details, level) VALUES(?,?,?,?)";
         try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
             ps.setString(2, module);
@@ -163,9 +149,16 @@ public class DatabaseManager {
                       "device_id TEXT," +
                       "type TEXT," +
                       "timestamp TEXT," +
-                      "details TEXT" +
+                      "details TEXT," +
+                      "module TEXT," +
+                      "level TEXT" +
                       ");";
-         try (Connection conn = connect(); Statement stmt = conn.createStatement()) { stmt.execute(sql); } catch (SQLException e) { e.printStackTrace(); }
+         try (Connection conn = connect(); Statement stmt = conn.createStatement()) { 
+             stmt.execute(sql); 
+             // Migrations: Add module and level if they don't exist
+             try { stmt.execute("ALTER TABLE events ADD COLUMN module TEXT"); } catch (SQLException e) {}
+             try { stmt.execute("ALTER TABLE events ADD COLUMN level TEXT"); } catch (SQLException e) {}
+         } catch (SQLException e) { e.printStackTrace(); }
     }
 
     private static void createAlertsTable() {
@@ -455,12 +448,14 @@ public class DatabaseManager {
     }
 
     public static void logEvent(String deviceId, String type, String details) {
-        String sql = "INSERT INTO events(device_id, type, timestamp, details) VALUES(?,?,?,?)";
+        String sql = "INSERT INTO events(device_id, type, timestamp, details, module, level) VALUES(?,?,?,?,?,?)";
         try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, deviceId);
             ps.setString(2, type);
             ps.setString(3, java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
             ps.setString(4, details);
+            ps.setString(5, "Device Controls");
+            ps.setString(6, "INFO");
             ps.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
     }

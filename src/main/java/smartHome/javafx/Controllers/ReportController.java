@@ -3,6 +3,9 @@ package smartHome.javafx.Controllers;
 
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.chart.*;
+import javafx.scene.Node;
+import javafx.application.Platform;
 import smartHome.app.ReportManager;
 import smartHome.javafx.Scene.SceneManager;
 import java.util.List;
@@ -53,7 +56,7 @@ public class ReportController {
     }
 
     private ComboBox<String> periodCombo;
-    private javafx.scene.chart.PieChart pieChart;
+    private BarChart<String, Number> barChart;
 
     private VBox createLogView() {
         VBox box = new VBox(10);
@@ -61,18 +64,19 @@ public class ReportController {
         
         HBox top = new HBox(10);
         periodCombo = new ComboBox<>();
-        periodCombo.getItems().addAll("Daily", "Weekly", "Monthly", "Yearly", "All Time");
+        periodCombo.getItems().addAll("Daily", "Weekly", "Monthly", "Yearly");
         periodCombo.setValue("Daily");
         periodCombo.setOnAction(e -> refreshAll());
 
-        Button refresh = new Button("Refresh");
+        Button refresh = new Button("Refresh Data");
+        refresh.getStyleClass().add("refresh-button");
         refresh.setOnAction(e -> refreshAll());
         
-        top.getChildren().addAll(new Label("Filter:"), periodCombo, refresh);
+        top.getChildren().addAll(new Label("Period:"), periodCombo, refresh);
 
         reportArea = new TextArea();
         reportArea.setEditable(false);
-        reportArea.setPrefHeight(400);
+        reportArea.setPrefHeight(350);
         reportArea.getStyleClass().add("log-text-area");
         
         box.getChildren().addAll(top, reportArea);
@@ -84,14 +88,19 @@ public class ReportController {
         VBox box = new VBox(15);
         box.getStyleClass().add("analytics-box");
         
-        Label chartTitle = new Label("Activity Distribution by Module");
+        Label chartTitle = new Label("Activity Metrics by Module");
         chartTitle.getStyleClass().add("chart-title-label");
 
-        pieChart = new javafx.scene.chart.PieChart();
-        pieChart.setClockwise(true);
-        pieChart.setLabelsVisible(true);
+        CategoryAxis xAxis = new CategoryAxis();
+        NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Modules");
+        yAxis.setLabel("Event Count");
+
+        barChart = new BarChart<>(xAxis, yAxis);
+        barChart.setLegendVisible(false);
+        barChart.setAnimated(false); 
         
-        box.getChildren().addAll(chartTitle, pieChart);
+        box.getChildren().addAll(chartTitle, barChart);
         return box;
     }
 
@@ -105,8 +114,8 @@ public class ReportController {
         List<String> logs = reportManager.getSystemLogs(period);
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("--- System Activity (%s) ---\n", period));
-        sb.append("TIME  | MODULE | EVENT\n");
-        sb.append("----------------------------\n");
+        sb.append("TIME  | MODULE         | EVENT\n");
+        sb.append("--------------------------------------------------\n");
         for(String log : logs) {
             sb.append(log).append("\n");
         }
@@ -117,10 +126,31 @@ public class ReportController {
         String period = periodCombo.getValue();
         Map<String, Integer> dist = reportManager.getModuleActivityDistribution(period);
         
-        pieChart.getData().clear();
-        for (Map.Entry<String, Integer> entry : dist.entrySet()) {
-            pieChart.getData().add(new javafx.scene.chart.PieChart.Data(entry.getKey(), entry.getValue()));
+        barChart.getData().clear();
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        
+        String[] modules = {"Security", "Child Monitor", "Device Controls"};
+        String[] colors = {"#ef4444", "#3b82f6", "#10b981"}; // Red, Blue, Green
+
+        for (int i = 0; i < modules.length; i++) {
+            String mod = modules[i];
+            int count = dist.getOrDefault(mod, 0);
+            XYChart.Data<String, Number> data = new XYChart.Data<>(mod, count);
+            series.getData().add(data);
         }
+
+        barChart.getData().add(series);
+
+        Platform.runLater(() -> {
+            for (int i = 0; i < modules.length; i++) {
+                if (series.getData().size() > i) {
+                    Node node = series.getData().get(i).getNode();
+                    if (node != null) {
+                        node.setStyle("-fx-bar-fill: " + colors[i] + ";");
+                    }
+                }
+            }
+        });
     }
 
     public VBox getView() {

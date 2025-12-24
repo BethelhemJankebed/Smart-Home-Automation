@@ -231,7 +231,7 @@ public class ControlRoomDeviceController {
             DatabaseManager.addDevice(d, currentRoom.getId());
             
             // Log Event
-            DatabaseManager.logEvent(d.getId(), newState ? "Turned ON" : "Turned OFF", "");
+            DatabaseManager.logEvent(d.getId(), newState ? "Turned ON" : "Turned OFF", d.getType() + " | " + d.getName());
             refreshLogs();
         });
 
