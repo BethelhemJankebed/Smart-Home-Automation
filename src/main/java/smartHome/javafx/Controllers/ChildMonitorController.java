@@ -284,7 +284,7 @@ public class ChildMonitorController {
         });
     }
 
-    private VBox createAlertCard(String time, String path, String msg) {
+    private VBox createAlertCard(String time, String alertIdStr, String msg) {
         VBox card = new VBox(10);
         card.getStyleClass().add("alert-card");
         
@@ -303,10 +303,12 @@ public class ChildMonitorController {
             javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION, "Delete this notification?", javafx.scene.control.ButtonType.YES, javafx.scene.control.ButtonType.NO);
             confirm.showAndWait().ifPresent(response -> {
                 if (response == javafx.scene.control.ButtonType.YES) {
-                    Room selected = roomSelector.getValue();
-                    if (selected != null) {
-                        DatabaseManager.deleteAlert(selected.getId(), time, "DANGER");
+                    try {
+                        int alertId = Integer.parseInt(alertIdStr);
+                        DatabaseManager.deleteAlertById(alertId);
                         updateAlertsUI();
+                    } catch (Exception ex) {
+                        System.err.println("UI_DEBUG: Failed to delete alert: " + ex.getMessage());
                     }
                 }
             });
@@ -321,7 +323,7 @@ public class ChildMonitorController {
         VBox snapFrame = new VBox();
         snapFrame.setAlignment(Pos.CENTER);
         try {
-            int alertId = Integer.parseInt(path);
+            int alertId = Integer.parseInt(alertIdStr);
             byte[] imgData = DatabaseManager.getAlertSnapshot(alertId);
             
             if (imgData != null && imgData.length > 0) {

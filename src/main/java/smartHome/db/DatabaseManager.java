@@ -69,7 +69,21 @@ public class DatabaseManager {
 
 
     public static Connection connect() throws SQLException {
-        return DriverManager.getConnection(DB_URL);
+        Connection conn = DriverManager.getConnection(DB_URL);
+        // Set busy timeout to wait for locks to clear (crucial for concurrency)
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("PRAGMA busy_timeout = 5000;");
+        }
+        return conn;
+    }
+
+    private static void enableWALMode() {
+        try (Connection conn = connect(); Statement stmt = conn.createStatement()) {
+            stmt.execute("PRAGMA journal_mode=WAL;");
+        } catch (SQLException e) {
+            // If WAL fails, it's usually because the DB is busy, but busy_timeout might help next time.
+            System.err.println("DB_DEBUG: Could not set WAL mode (might already be active or DB is busy): " + e.getMessage());
+        }
     }
 
     private static void createRoomsTable() {
@@ -123,6 +137,7 @@ public class DatabaseManager {
 
     // Call this in static block
     static {
+        enableWALMode(); // Set WAL mode first
         createUsersTable();
         createRoomsTable();
         createDevicesTable();
@@ -312,7 +327,20 @@ public class DatabaseManager {
             ps.setString(2, timestamp);
             ps.setString(3, type);
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) { 
+            System.err.println("DB_ERROR: deleteAlert (timestamp) failed: " + e.getMessage());
+        }
+    }
+
+    public static void deleteAlertById(int id) {
+        String sql = "DELETE FROM alerts WHERE id = ?";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            int rows = ps.executeUpdate();
+            System.out.println("DB_DEBUG: Successfully deleted alert ID " + id + ". Rows: " + rows);
+        } catch (SQLException e) { 
+            System.err.println("DB_ERROR: deleteAlertById failed for ID " + id + ": " + e.getMessage());
+        }
     }
 
     public static boolean registerUser(String username, String password) {

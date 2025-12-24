@@ -557,7 +557,7 @@ public class SecurityMonitorController {
         });
     }
 
-    private VBox createAlertCard(String time, String path, String msg) {
+    private VBox createAlertCard(String time, String alertIdStr, String msg) {
         VBox card = new VBox(10);
         card.getStyleClass().add("alert-card");
         
@@ -596,10 +596,12 @@ public class SecurityMonitorController {
 
             confirm.showAndWait().ifPresent(response -> {
                 if (response == ButtonType.YES) {
-                    Room selected = roomSelector.getValue();
-                    if (selected != null) {
-                        DatabaseManager.deleteAlert(selected.getId(), time, "SECURITY");
+                    try {
+                        int alertId = Integer.parseInt(alertIdStr);
+                        DatabaseManager.deleteAlertById(alertId);
                         updateAlertsUI();
+                    } catch (Exception ex) {
+                        System.err.println("UI_DEBUG: Failed to delete alert: " + ex.getMessage());
                     }
                 }
             });
@@ -614,7 +616,7 @@ public class SecurityMonitorController {
         VBox snapFrame = new VBox();
         snapFrame.setAlignment(Pos.CENTER);
         try {
-            int alertId = Integer.parseInt(path);
+            int alertId = Integer.parseInt(alertIdStr);
             byte[] imgData = DatabaseManager.getAlertSnapshot(alertId);
             
             if (imgData != null && imgData.length > 0) {
