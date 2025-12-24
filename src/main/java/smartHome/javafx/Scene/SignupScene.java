@@ -26,6 +26,14 @@ public class SignupScene {
         StackPane icon = new StackPane(circle, lock);
         icon.getStyleClass().add("icon-container");
 
+        // --- Title ---
+        Label title = new Label("Create Account");
+        title.getStyleClass().add("title");
+
+        Label subtitle = new Label("Join us to manage your smart home devices easily");
+        subtitle.getStyleClass().add("subtitle");
+        subtitle.setWrapText(true);
+
         // --- Inputs ---
         TextField username = new TextField();
         username.setPromptText("Username");
@@ -60,6 +68,8 @@ public class SignupScene {
         // --- Assemble Card ---
         card.getChildren().addAll(
                 icon,
+                title,
+                subtitle,
                 username,
                 password,
                 error,
