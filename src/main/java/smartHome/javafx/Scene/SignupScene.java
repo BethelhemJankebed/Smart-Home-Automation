@@ -13,17 +13,34 @@ public class SignupScene {
 
     public static Scene create() {
 
+        // --- Card Container ---
+        VBox card = new VBox(15);
+        card.getStyleClass().add("signup-card");
+        card.setAlignment(Pos.CENTER);
+
+        // --- Icon ---
+        Circle circle = new Circle(30);
+        circle.getStyleClass().add("lock-icon-bg");
+        Label lock = new Label("🔒"); // Using emoji as requested/implied by previous code, or could use font icon
+        lock.getStyleClass().add("lock-icon-text");
+        StackPane icon = new StackPane(circle, lock);
+        icon.getStyleClass().add("icon-container");
+
+        // --- Inputs ---
         TextField username = new TextField();
         username.setPromptText("Username");
+        username.getStyleClass().add("input-field");
 
         PasswordField password = new PasswordField();
         password.setPromptText("Password");
+        password.getStyleClass().add("input-field");
 
         Label error = new Label();
-        error.setTextFill(Color.RED);
+        error.getStyleClass().add("error-label");
 
+        // --- Buttons ---
         Button signup = new Button("Sign Up");
-        signup.setPrefWidth(260);
+        signup.getStyleClass().add("primary-button");
 
         signup.setOnAction(e -> {
             if (DatabaseManager.registerUser(
@@ -37,14 +54,11 @@ public class SignupScene {
         });
 
         Button back = new Button("Already have an account? Login");
+        back.getStyleClass().add("link-button");
         back.setOnAction(e -> SceneManager.switchScene("Login"));
 
-        Circle circle = new Circle(30, Color.web("#2563eb"));
-        Label lock = new Label("🔒");
-        lock.setStyle("-fx-font-size: 44px; -fx-text-fill: white;");
-        StackPane icon = new StackPane(circle, lock);
-
-        VBox box = new VBox(14,
+        // --- Assemble Card ---
+        card.getChildren().addAll(
                 icon,
                 username,
                 password,
@@ -53,11 +67,15 @@ public class SignupScene {
                 back
         );
 
-        box.setAlignment(Pos.CENTER);
-        box.setMaxWidth(320);
-        box.setStyle("-fx-background-color: white; -fx-padding: 30;");
+        // --- Root ---
+        StackPane root = new StackPane(card);
+        root.getStyleClass().add("root");
 
-        StackPane root = new StackPane(box);
-        return new Scene(root, 1000, 600);
+        Scene scene = new Scene(root, 1000, 600);
+        scene.getStylesheets().add(
+               SignupScene.class.getResource("/smartHome/javafx/Css/signup.css").toExternalForm()
+        );
+        
+        return scene;
     }
 }

@@ -1,0 +1,127 @@
+.root-appliances {
+    -fx-background-color: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+    -fx-padding: 30;
+}
+
+.header-container {
+    -fx-background-color: white;
+    -fx-padding: 20;
+    -fx-background-radius: 15;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 4);
+    -fx-alignment: center-left;
+}
+
+.back-button {
+    -fx-background-color: #f1f5f9;
+    -fx-text-fill: #64748b;
+    -fx-font-size: 18px;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+}
+
+.app-title {
+    -fx-font-size: 26px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #1e293b;
+}
+
+.app-subtitle {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 13px;
+}
+
+.add-room-button {
+    -fx-background-color: #3b82f6;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 10 20;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+}
+
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.admin-report-card {
+    -fx-background-color: linear-gradient(to bottom right, #eff6ff, #dbeafe);
+    -fx-background-radius: 20;
+    -fx-padding: 25;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.2), 20, 0, 0, 10);
+    -fx-cursor: hand;
+    -fx-alignment: center;
+}
+
+.report-icon {
+    -fx-font-size: 44px;
+}
+
+.report-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #1e40af;
+}
+
+.report-desc {
+    -fx-text-fill: #60a5fa;
+    -fx-font-size: 11px;
+}
+
+/* Room Card */
+.room-card {
+    -fx-background-color: white;
+    -fx-background-radius: 20;
+    -fx-padding: 25;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 20, 0, 0, 8);
+    -fx-cursor: hand;
+}
+
+.remove-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #cbd5e1;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.room-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #1e293b;
+}
+
+.status-on {
+    -fx-text-fill: #10b981;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.status-off {
+    -fx-text-fill: #94a3b8;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+/* Dynamic Icon Colors */
+.icon-bg {
+    -fx-opacity: 0.12; /* Represents the '20' alpha in hex - approx 12% */
+}
+
+/* Colors */
+.color-orange { -fx-fill: #f97316; -fx-text-fill: #f97316; }
+.color-indigo { -fx-fill: #6366f1; -fx-text-fill: #6366f1; }
+.color-cyan   { -fx-fill: #06b6d4; -fx-text-fill: #06b6d4; }
+.color-pink   { -fx-fill: #ec4899; -fx-text-fill: #ec4899; }
+.color-violet { -fx-fill: #8b5cf6; -fx-text-fill: #8b5cf6; }
+.color-yellow { -fx-fill: #eab308; -fx-text-fill: #eab308; }
+.color-red    { -fx-fill: #ef4444; -fx-text-fill: #ef4444; }
+.color-green  { -fx-fill: #22c55e; -fx-text-fill: #22c55e; }
+.color-blue   { -fx-fill: #3b82f6; -fx-text-fill: #3b82f6; }
+
+.icon-label {
+    -fx-font-size: 26px;
+}

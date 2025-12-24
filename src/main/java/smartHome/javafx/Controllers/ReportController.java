@@ -1,6 +1,5 @@
 package smartHome.javafx.Controllers;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
@@ -24,23 +23,23 @@ public class ReportController {
         reportManager = new ReportManager();
         
         root = new VBox(20);
-        root.setPadding(new Insets(20));
-        root.setStyle("-fx-background-color: #f3f4f6;");
+        root.getStyleClass().add("root-report");
 
         // Header
         HBox header = new HBox(20);
-        header.setAlignment(Pos.CENTER_LEFT);
+        header.getStyleClass().add("header-container");
         
         Button backBtn = new Button("← Back");
+        backBtn.getStyleClass().add("back-button");
         backBtn.setOnAction(e -> SceneManager.switchScene("Dashboard"));
 
         Label title = new Label("Admin Reports & Analytics");
-        title.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
+        title.getStyleClass().add("report-title");
 
         header.getChildren().addAll(backBtn, title);
         
         TabPane tabs = new TabPane();
-        tabs.setStyle("-fx-background-color: transparent;");
+        tabs.getStyleClass().add("report-tab-pane");
         
         Tab tabLogs = new Tab("Event Logs");
         tabLogs.setClosable(false);
@@ -53,11 +52,14 @@ public class ReportController {
         tabs.getTabs().addAll(tabCharts, tabLogs);
 
         root.getChildren().addAll(header, tabs);
+        
+        // Load CSS
+        root.getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/report.css").toExternalForm());
     }
 
     private VBox createLogView() {
         VBox box = new VBox(10);
-        box.setPadding(new Insets(15));
+        box.getStyleClass().add("log-view-box");
         
         Button refresh = new Button("Refresh Logs");
         refresh.setOnAction(e -> showAllEvents());
@@ -65,7 +67,7 @@ public class ReportController {
         reportArea = new TextArea();
         reportArea.setEditable(false);
         reportArea.setPrefHeight(400);
-        reportArea.setStyle("-fx-font-family: 'Consolas', monospace;");
+        reportArea.getStyleClass().add("log-text-area");
         
         box.getChildren().addAll(refresh, reportArea);
         
@@ -76,11 +78,10 @@ public class ReportController {
 
     private VBox createAnalyticsView() {
         VBox box = new VBox(15);
-        box.setPadding(new Insets(15));
-        box.setAlignment(Pos.CENTER);
+        box.getStyleClass().add("analytics-box");
         
         HBox periodSelector = new HBox(10);
-        periodSelector.setAlignment(Pos.CENTER);
+        periodSelector.getStyleClass().add("period-selector");
         ToggleGroup group = new ToggleGroup();
         
         ToggleButton btnDaily = new ToggleButton("Daily");
@@ -93,7 +94,10 @@ public class ReportController {
         ToggleButton btnMonthly = new ToggleButton("Monthly");
         btnMonthly.setToggleGroup(group);
         
-        periodSelector.getChildren().addAll(new Label("Period:"), btnDaily, btnWeekly, btnMonthly);
+        Label pLabel = new Label("Period:");
+        pLabel.getStyleClass().add("period-label");
+        
+        periodSelector.getChildren().addAll(pLabel, btnDaily, btnWeekly, btnMonthly);
         
         // Chart
         CategoryAxis xAxis = new CategoryAxis();

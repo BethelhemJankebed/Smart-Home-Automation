@@ -1,0 +1,180 @@
+.root-room {
+    -fx-background-color: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+    -fx-padding: 30;
+}
+
+.header-container {
+    -fx-background-color: white;
+    -fx-padding: 20;
+    -fx-background-radius: 15;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 4);
+    -fx-alignment: center-left;
+}
+
+.back-button {
+    -fx-background-color: #f1f5f9;
+    -fx-text-fill: #64748b;
+    -fx-font-size: 18px;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+}
+
+.room-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #1e293b;
+}
+
+.room-subtitle {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 13px;
+}
+
+.add-device-button {
+    -fx-background-color: #3b82f6;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 10 20;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+}
+
+.transparent-scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.transparent-scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+/* Activity Feed */
+.activity-feed-container {
+    -fx-background-color: white;
+    -fx-padding: 25;
+    -fx-background-radius: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 20, 0, 0, 10);
+}
+
+.activity-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #1e293b;
+}
+
+/* Log Entries */
+.log-entry-base {
+    -fx-background-radius: 12;
+    -fx-padding: 12;
+}
+
+.log-bg-green { -fx-background-color: #f0fdf4; }
+.log-bg-gray  { -fx-background-color: #f8fafc; }
+.log-bg-red   { -fx-background-color: #fef2f2; }
+
+.log-action-text {
+    -fx-font-weight: 900;
+    -fx-font-size: 9px;
+    -fx-letter-spacing: 1px;
+}
+
+.log-text-green { -fx-text-fill: #16a34a; }
+.log-text-gray  { -fx-text-fill: #64748b; }
+.log-text-red   { -fx-text-fill: #dc2626; }
+
+.log-device-name {
+    -fx-font-weight: 800;
+    -fx-text-fill: #1e293b;
+    -fx-font-size: 13px;
+}
+
+.log-time-text {
+    -fx-opacity: 0.7;
+    -fx-font-size: 10px;
+}
+
+/* Device Cards */
+.device-card {
+    -fx-background-color: white;
+    -fx-background-radius: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 15, 0, 0, 5);
+    -fx-padding: 20;
+    -fx-alignment: center;
+}
+
+.device-icon {
+    -fx-font-size: 36px;
+}
+
+/* Icon Colors (Text Fill) */
+.color-amber{ -fx-text-fill: #f59e0b; -fx-effect: dropshadow(gaussian, rgba(245, 158, 11, 0.4), 10, 0, 0, 4); }
+.color-blue { -fx-text-fill: #3b82f6; -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.4), 10, 0, 0, 4); }
+.color-violet{ -fx-text-fill: #8b5cf6; -fx-effect: dropshadow(gaussian, rgba(139, 92, 246, 0.4), 10, 0, 0, 4); }
+.color-teal { -fx-text-fill: #14b8a6; -fx-effect: dropshadow(gaussian, rgba(20, 184, 166, 0.4), 10, 0, 0, 4); }
+.color-rose { -fx-text-fill: #f43f5e; -fx-effect: dropshadow(gaussian, rgba(244, 63, 94, 0.4), 10, 0, 0, 4); }
+.color-slate{ -fx-text-fill: #64748b; }
+
+.device-name {
+    -fx-font-weight: 800;
+    -fx-text-fill: #1e293b;
+    -fx-font-size: 14px;
+}
+
+.device-type {
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+/* Toggle Buttons */
+.toggle-btn-base {
+    -fx-font-weight: 900;
+    -fx-background-radius: 10;
+    -fx-font-size: 10px;
+    -fx-cursor: hand;
+}
+
+.toggle-on {
+    -fx-background-color: #10b981;
+    -fx-text-fill: white;
+}
+
+.toggle-off {
+    -fx-background-color: #f1f5f9;
+    -fx-text-fill: #94a3b8;
+}
+
+/* Other Buttons */
+.settings-btn {
+    -fx-background-color: #f1f5f9;
+    -fx-text-fill: #64748b;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+    -fx-font-size: 10px;
+}
+
+.delete-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #ef4444;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+}
+
+.link-btn-on {
+    -fx-background-color: #3b82f6;
+    -fx-text-fill: white;
+    -fx-cursor: hand;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+}
+
+.link-btn-off {
+    -fx-background-color: #e2e8f0;
+    -fx-text-fill: #64748b;
+    -fx-cursor: hand;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+}

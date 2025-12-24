@@ -1,6 +1,5 @@
 package smartHome.javafx.Controllers;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -18,30 +17,28 @@ public class ControlHomeAppliancesController {
     public ControlHomeAppliancesController() {
         // Initialize UI with a premium background
         root = new VBox(25);
-        root.setPadding(new Insets(30));
-        root.setStyle("-fx-background-color: linear-gradient(to bottom right, #f8fafc, #f1f5f9);");
+        root.getStyleClass().add("root-appliances");
 
         // Header
         HBox header = new HBox(20);
-        header.setAlignment(Pos.CENTER_LEFT);
-        header.setStyle("-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 15; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 4);");
+        header.getStyleClass().add("header-container");
         
         Button backBtn = new Button("←");
-        backBtn.setStyle("-fx-background-color: #f1f5f9; -fx-text-fill: #64748b; -fx-font-size: 18px; -fx-background-radius: 10; -fx-cursor: hand;");
+        backBtn.getStyleClass().add("back-button");
         backBtn.setOnAction(e -> goBack());
 
         VBox titleBox = new VBox(2);
         Label title = new Label("My Smart Home");
-        title.setStyle("-fx-font-size: 26px; -fx-font-weight: 800; -fx-text-fill: #1e293b;");
+        title.getStyleClass().add("app-title");
         Label subtitle = new Label("Control and monitor your appliances by room");
-        subtitle.setStyle("-fx-text-fill: #64748b; -fx-font-size: 13px;");
+        subtitle.getStyleClass().add("app-subtitle");
         titleBox.getChildren().addAll(title, subtitle);
         
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         Button addRoomBtn = new Button("+ Add Room");
-        addRoomBtn.setStyle("-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-background-radius: 10; -fx-cursor: hand;");
+        addRoomBtn.getStyleClass().add("add-room-button");
         addRoomBtn.setOnAction(e -> openAddRoom());
 
         header.getChildren().addAll(backBtn, titleBox, spacer, addRoomBtn);
@@ -53,10 +50,13 @@ public class ControlHomeAppliancesController {
         
         ScrollPane scroll = new ScrollPane(roomsContainer);
         scroll.setFitToWidth(true);
-        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        scroll.getStyleClass().add("scroll-pane");
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         
         root.getChildren().addAll(header, scroll);
+        
+        // Load CSS
+        root.getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/appliances.css").toExternalForm());
     }
     
     public VBox getView() {
@@ -76,17 +76,16 @@ public class ControlHomeAppliancesController {
     private void addReportsCard() {
         VBox card = new VBox(15);
         card.setPrefWidth(240);
-        card.setAlignment(Pos.CENTER);
-        card.setStyle("-fx-background-color: linear-gradient(to bottom right, #eff6ff, #dbeafe); -fx-background-radius: 20; -fx-padding: 25; -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.2), 20, 0, 0, 10); -fx-cursor: hand;");
+        card.getStyleClass().add("admin-report-card");
         
         Label iconLabel = new Label("📊");
-        iconLabel.setStyle("-fx-font-size: 44px;");
+        iconLabel.getStyleClass().add("report-icon");
         
         Label nameLabel = new Label("Admin Reports");
-        nameLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: 800; -fx-text-fill: #1e40af;");
+        nameLabel.getStyleClass().add("report-title");
         
         Label desc = new Label("View system logs");
-        desc.setStyle("-fx-text-fill: #60a5fa; -fx-font-size: 11px;");
+        desc.getStyleClass().add("report-desc");
 
         card.getChildren().addAll(iconLabel, nameLabel, desc);
         card.setOnMouseClicked(e -> SceneManager.switchScene("Reports"));
@@ -99,35 +98,36 @@ public class ControlHomeAppliancesController {
 
         VBox card = new VBox(12);
         card.setPrefWidth(240);
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 20; -fx-padding: 25; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 20, 0, 0, 8); -fx-cursor: hand;");
+        card.getStyleClass().add("room-card");
 
         HBox topRow = new HBox();
         topRow.setAlignment(Pos.CENTER_LEFT);
         
-        String color = switch(icon != null ? icon : "") {
-            case "🍳" -> "#f97316"; // Orange
-            case "🛏" -> "#6366f1"; // Indigo
-            case "🚿" -> "#06b6d4"; // Cyan
-            case "🧒" -> "#ec4899"; // Pink
-            case "📺" -> "#8b5cf6"; // Violet
-            case "🧺" -> "#eab308"; // Yellow
-            case "🚗" -> "#ef4444"; // Red
-            case "🌳" -> "#22c55e"; // Green
-            default -> "#3b82f6";   // Blue
+        String colorClass = switch(icon != null ? icon : "") {
+            case "🍳" -> "color-orange"; 
+            case "🛏" -> "color-indigo"; 
+            case "🚿" -> "color-cyan"; 
+            case "🧒" -> "color-pink"; 
+            case "📺" -> "color-violet"; 
+            case "🧺" -> "color-yellow"; 
+            case "🚗" -> "color-red"; 
+            case "🌳" -> "color-green"; 
+            default -> "color-blue";
         };
 
         StackPane iconPane = new StackPane();
         Circle circle = new Circle(26);
-        circle.setStyle("-fx-fill: " + color + "20;"); // Tinted background
+        circle.getStyleClass().addAll("icon-bg", colorClass); // Tinted background due to opacity
+        
         Label iconLabel = new Label(icon != null ? icon : "🏠");
-        iconLabel.setStyle("-fx-font-size: 26px; -fx-text-fill: " + color + ";");
+        iconLabel.getStyleClass().addAll("icon-label", colorClass);
         iconPane.getChildren().addAll(circle, iconLabel);
         
         Region s = new Region();
         HBox.setHgrow(s, Priority.ALWAYS);
         
         Button removeBtn = new Button("×");
-        removeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #cbd5e1; -fx-font-size: 20px; -fx-font-weight: bold;");
+        removeBtn.getStyleClass().add("remove-button");
         removeBtn.setOnAction(e -> {
             // DatabaseManager.deleteRoom(room.getId()); // Optional: implement deletion
             roomsContainer.getChildren().remove(card);
@@ -137,13 +137,17 @@ public class ControlHomeAppliancesController {
 
         VBox infoBox = new VBox(4);
         Label roomName = new Label(name);
-        roomName.setStyle("-fx-font-size: 18px; -fx-font-weight: 800; -fx-text-fill: #1e293b;");
+        roomName.getStyleClass().add("room-title");
         
         int active = DatabaseManager.getActiveDeviceCountForRoom(room.getId());
         int total = DatabaseManager.getTotalDeviceCountForRoom(room.getId());
         
         Label statusLabel = new Label(active + " / " + total + " Devices ON");
-        statusLabel.setStyle("-fx-text-fill: " + (active > 0 ? "#10b981" : "#94a3b8") + "; -fx-font-weight: bold; -fx-font-size: 12px;");
+        if (active > 0) {
+            statusLabel.getStyleClass().add("status-on");
+        } else {
+            statusLabel.getStyleClass().add("status-off");
+        }
         
         infoBox.getChildren().addAll(roomName, statusLabel);
 

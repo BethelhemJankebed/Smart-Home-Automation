@@ -24,8 +24,8 @@ public class ControlRoomDeviceController {
 
     public ControlRoomDeviceController() {
         HBox mainLayout = new HBox(40);
-        mainLayout.setPadding(new Insets(30));
-        mainLayout.setStyle("-fx-background-color: linear-gradient(to bottom right, #f8fafc, #f1f5f9);");
+        mainLayout.getStyleClass().add("root-room");
+        
         HBox.setHgrow(mainLayout, Priority.ALWAYS);
 
         // LEFT SIDE: Devices
@@ -34,25 +34,24 @@ public class ControlRoomDeviceController {
         
         // 1. Header
         HBox header = new HBox(20);
-        header.setAlignment(Pos.CENTER_LEFT);
-        header.setStyle("-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 15; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 4);");
+        header.getStyleClass().add("header-container");
         
         Button backBtn = new Button("←");
-        backBtn.setStyle("-fx-background-color: #f1f5f9; -fx-text-fill: #64748b; -fx-font-size: 18px; -fx-background-radius: 10; -fx-cursor: hand;");
+        backBtn.getStyleClass().add("back-button");
         backBtn.setOnAction(e -> SceneManager.switchScene("AppliancesModule")); 
 
         VBox titleBox = new VBox(2);
         Label title = new Label("Room Devices");
-        title.setStyle("-fx-font-size: 24px; -fx-font-weight: 800; -fx-text-fill: #1e293b;");
+        title.getStyleClass().add("room-title");
         Label subtitle = new Label("Manage your room appliances");
-        subtitle.setStyle("-fx-text-fill: #64748b; -fx-font-size: 13px;");
+        subtitle.getStyleClass().add("room-subtitle");
         titleBox.getChildren().addAll(title, subtitle);
         
         Region s1 = new Region();
         HBox.setHgrow(s1, Priority.ALWAYS);
         
         Button addDeviceBtn = new Button("+ Add New Device");
-        addDeviceBtn.setStyle("-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-background-radius: 10; -fx-cursor: hand;");
+        addDeviceBtn.getStyleClass().add("add-device-button");
         addDeviceBtn.setOnAction(e -> openAddDeviceDialog());
 
         header.getChildren().addAll(backBtn, titleBox, s1, addDeviceBtn);
@@ -64,7 +63,7 @@ public class ControlRoomDeviceController {
         
         ScrollPane scroll = new ScrollPane(devicesContainer);
         scroll.setFitToWidth(true);
-        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        scroll.getStyleClass().add("transparent-scroll-pane");
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
         leftSide.getChildren().addAll(header, scroll);
@@ -73,15 +72,15 @@ public class ControlRoomDeviceController {
         VBox rightSide = new VBox(20);
         rightSide.setPrefWidth(320);
         rightSide.setMinWidth(320);
-        rightSide.setStyle("-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 20, 0, 0, 10);");
+        rightSide.getStyleClass().add("activity-feed-container");
 
         Label logTitle = new Label("Activity Feed");
-        logTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: 800; -fx-text-fill: #1e293b;");
+        logTitle.getStyleClass().add("activity-title");
         
         logContainer = new VBox(12);
         ScrollPane logScroll = new ScrollPane(logContainer);
         logScroll.setFitToWidth(true);
-        logScroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        logScroll.getStyleClass().add("transparent-scroll-pane");
         logScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         VBox.setVgrow(logScroll, Priority.ALWAYS);
 
@@ -92,6 +91,9 @@ public class ControlRoomDeviceController {
         root = new VBox(mainLayout); 
         root.setFillWidth(true);
         VBox.setVgrow(mainLayout, Priority.ALWAYS);
+        
+        // Load CSS
+        root.getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/room-device.css").toExternalForm());
 
         // Load Data
         Object data = SceneManager.getData();
@@ -104,19 +106,19 @@ public class ControlRoomDeviceController {
         }
     }
     
-    private VBox createLogEntry(String action, String deviceName, String time, String bgHex, String textHex) {
+    // Updated to accept style classes instead of raw hex
+    private VBox createLogEntry(String action, String deviceName, String time, String bgClass, String textClass) {
         VBox entry = new VBox(4);
-        entry.setPadding(new Insets(12));
-        entry.setStyle("-fx-background-color: " + bgHex + "; -fx-background-radius: 12;");
+        entry.getStyleClass().addAll("log-entry-base", bgClass);
         
         Label actionLbl = new Label(action.toUpperCase());
-        actionLbl.setStyle("-fx-font-weight: 900; -fx-text-fill: " + textHex + "; -fx-font-size: 9px; -fx-letter-spacing: 1px;");
+        actionLbl.getStyleClass().addAll("log-action-text", textClass);
         
         Label deviceLbl = new Label(deviceName);
-        deviceLbl.setStyle("-fx-font-weight: 800; -fx-text-fill: #1e293b; -fx-font-size: 13px;");
+        deviceLbl.getStyleClass().add("log-device-name");
         
         Label timeLbl = new Label("at " + time);
-        timeLbl.setStyle("-fx-text-fill: " + textHex + "; -fx-opacity: 0.7; -fx-font-size: 10px;");
+        timeLbl.getStyleClass().addAll("log-time-text", textClass);
         
         entry.getChildren().addAll(actionLbl, deviceLbl, timeLbl);
         return entry;
@@ -152,23 +154,25 @@ public class ControlRoomDeviceController {
         
         List<String[]> events = DatabaseManager.getEventsForRoom(currentRoom.getId());
         for (String[] ev : events) {
-            String bg = "#f0fdf4";
-            String text = "#16a34a";
+            // Determine styling classes based on event content
+            String bgClass = "log-bg-green";
+            String textClass = "log-text-green";
+            
             if (ev[0].contains("OFF")) {
-                bg = "#f8fafc"; text = "#64748b";
+                bgClass = "log-bg-gray";
+                textClass = "log-text-gray";
             } else if (ev[0].contains("Motion")) {
-                bg = "#fef2f2"; text = "#dc2626";
+                bgClass = "log-bg-red";
+                textClass = "log-text-red";
             }
-            logContainer.getChildren().add(createLogEntry(ev[0], ev[1], ev[2], bg, text));
+            logContainer.getChildren().add(createLogEntry(ev[0], ev[1], ev[2], bgClass, textClass));
         }
     }
 
     private VBox createDeviceCard(Device d) {
         VBox card = new VBox(15);
-        card.setPadding(new Insets(20));
-        card.setAlignment(Pos.CENTER);
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 15, 0, 0, 5);");
         card.setPrefWidth(160);
+        card.getStyleClass().add("device-card");
 
         String icon = switch(d.getType()) {
             case "Light" -> "💡";
@@ -179,47 +183,47 @@ public class ControlRoomDeviceController {
             default -> "⚙️";
         };
 
-        String color = switch(d.getType()) {
-            case "Light" -> "#f59e0b"; // Amber
-            case "Fan" -> "#3b82f6";   // Blue
-            case "TV" -> "#8b5cf6";    // Violet
-            case "DoorLock" -> "#14b8a6"; // Teal
-            case "Camera" -> "#f43f5e"; // Rose
-            default -> "#64748b";       // Slate
+        String colorClass = switch(d.getType()) {
+            case "Light" -> "color-amber"; 
+            case "Fan" -> "color-blue";
+            case "TV" -> "color-violet";
+            case "DoorLock" -> "color-teal";
+            case "Camera" -> "color-rose";
+            default -> "color-slate";
         };
 
         Label iconLabel = new Label(icon);
-        iconLabel.setStyle("-fx-font-size: 36px; -fx-text-fill: " + color + "; -fx-effect: dropshadow(gaussian, " + color + "40, 10, 0, 0, 4);");
+        iconLabel.getStyleClass().addAll("device-icon", colorClass);
 
         VBox titleBox = new VBox(2);
         titleBox.setAlignment(Pos.CENTER);
         Label nameInfo = new Label(d.getName());
-        nameInfo.setStyle("-fx-font-weight: 800; -fx-text-fill: #1e293b; -fx-font-size: 14px;");
+        nameInfo.getStyleClass().add("device-name");
+        
         Label typeInfo = new Label(d.getType());
-        typeInfo.setStyle("-fx-text-fill: #94a3b8; -fx-font-size: 11px; -fx-font-weight: bold;");
+        typeInfo.getStyleClass().add("device-type");
         titleBox.getChildren().addAll(nameInfo, typeInfo);
 
         ToggleButton powerBtn = new ToggleButton(d.isOn() ? "ENABLED" : "DISABLED");
         powerBtn.setSelected(d.isOn());
         powerBtn.setPrefWidth(120);
-        String activeStyle = "-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: 900; -fx-background-radius: 10; -fx-font-size: 10px; -fx-cursor: hand;";
-        String inactiveStyle = "-fx-background-color: #f1f5f9; -fx-text-fill: #94a3b8; -fx-font-weight: 900; -fx-background-radius: 10; -fx-font-size: 10px; -fx-cursor: hand;";
         
-        powerBtn.setStyle(d.isOn() ? activeStyle : inactiveStyle);
-        powerBtn.setStyle(d.isOn() ? activeStyle : inactiveStyle);
+        // Initial state style
+        powerBtn.getStyleClass().add("toggle-btn-base");
+        powerBtn.getStyleClass().add(d.isOn() ? "toggle-on" : "toggle-off");
         
         // Listener for external updates (e.g. from Camera)
         d.setOnStateChanged(() -> javafx.application.Platform.runLater(() -> {
             boolean on = d.isOn();
             powerBtn.setSelected(on);
             powerBtn.setText(on ? "ENABLED" : "DISABLED");
-            powerBtn.setStyle(on ? activeStyle : inactiveStyle);
+            updateToggleStyle(powerBtn, on);
         }));
         
         powerBtn.setOnAction(e -> {
             boolean newState = powerBtn.isSelected();
             powerBtn.setText(newState ? "ENABLED" : "DISABLED");
-            powerBtn.setStyle(newState ? activeStyle : inactiveStyle);
+            updateToggleStyle(powerBtn, newState);
             
             if (newState) d.turnOn(); else d.turnOff();
             
@@ -234,12 +238,12 @@ public class ControlRoomDeviceController {
         Button settingsBtn = null;
         if (d instanceof Camera cam) {
             settingsBtn = new Button("⚙ Settings");
-            settingsBtn.setStyle("-fx-background-color: #f1f5f9; -fx-text-fill: #64748b; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand; -fx-font-size: 10px;");
+            settingsBtn.getStyleClass().add("settings-btn");
             settingsBtn.setOnAction(e -> openEditCameraSourceDialog(cam));
         }
 
         Button deleteBtn = new Button("🗑");
-        deleteBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #ef4444; -fx-font-size: 14px; -fx-cursor: hand;");
+        deleteBtn.getStyleClass().add("delete-btn");
         deleteBtn.setOnAction(e -> {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Delete " + d.getName() + "?", ButtonType.YES, ButtonType.NO);
             alert.showAndWait().ifPresent(response -> {
@@ -255,17 +259,13 @@ public class ControlRoomDeviceController {
         HBox topRow = new HBox(deleteBtn);
         topRow.setAlignment(Pos.CENTER_RIGHT);
 
-
         if (settingsBtn != null) {
             card.getChildren().addAll(topRow, iconLabel, titleBox, powerBtn, settingsBtn);
         } else {
             // Check if it's a light and we have a camera in the room to link to
             if (d instanceof Light light) {
                  Button linkBtn = new Button(light.isLinked() ? "🔗 Linked" : "🔗 Link");
-                 String linkStyle = light.isLinked() 
-                     ? "-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-cursor: hand; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 8;"
-                     : "-fx-background-color: #e2e8f0; -fx-text-fill: #64748b; -fx-cursor: hand; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 8;";
-                 linkBtn.setStyle(linkStyle);
+                 updateLinkButtonStyle(linkBtn, light.isLinked());
                  
                  linkBtn.setOnAction(e -> {
                      handleLinkLight(light, linkBtn);
@@ -277,6 +277,16 @@ public class ControlRoomDeviceController {
             }
         }
         return card;
+    }
+    
+    private void updateToggleStyle(ToggleButton btn, boolean isOn) {
+        btn.getStyleClass().removeAll("toggle-on", "toggle-off");
+        btn.getStyleClass().add(isOn ? "toggle-on" : "toggle-off");
+    }
+
+    private void updateLinkButtonStyle(Button btn, boolean isLinked) {
+        btn.getStyleClass().removeAll("link-btn-on", "link-btn-off");
+        btn.getStyleClass().add(isLinked ? "link-btn-on" : "link-btn-off");
     }
     
     private void handleLinkLight(Light light, Button btn) {
@@ -299,7 +309,7 @@ public class ControlRoomDeviceController {
             light.unlinkCamera();
             DatabaseManager.addDevice(light, currentRoom.getId());
             btn.setText("🔗 Link");
-            btn.setStyle("-fx-background-color: #e2e8f0; -fx-text-fill: #64748b; -fx-cursor: hand; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 8;");
+            updateLinkButtonStyle(btn, false);
             DatabaseManager.logEvent(light.getId(), "LINK", "Unlinked from camera");
         } else {
             // Link
@@ -317,7 +327,7 @@ public class ControlRoomDeviceController {
             light.setLinkedCameraId(target.getId());
             DatabaseManager.addDevice(light, currentRoom.getId());
             btn.setText("🔗 Linked");
-            btn.setStyle("-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-cursor: hand; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 8;");
+            updateLinkButtonStyle(btn, true);
             DatabaseManager.logEvent(light.getId(), "LINK", "Linked to camera " + target.getName());
         }
         refreshLogs();

@@ -1,0 +1,75 @@
+.root {
+    -fx-background-color: #f8fafc;
+    -fx-font-family: 'Segoe UI', sans-serif;
+}
+
+.signup-card {
+    -fx-background-color: white;
+    -fx-background-radius: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 4);
+    -fx-padding: 40;
+    -fx-max-width: 400;
+}
+
+.icon-container {
+    -fx-alignment: center;
+    -fx-padding: 0 0 20 0;
+}
+
+.lock-icon-bg {
+    -fx-fill: #2563eb;
+}
+
+.lock-icon-text {
+    -fx-font-size: 32px;
+    -fx-fill: white;
+}
+
+.input-field {
+    -fx-background-color: #f1f5f9;
+    -fx-background-radius: 8;
+    -fx-padding: 12;
+    -fx-font-size: 14px;
+    -fx-text-fill: #334155;
+    -fx-prompt-text-fill: #94a3b8;
+    -fx-border-width: 0;
+}
+
+.input-field:focused {
+    -fx-background-color: white;
+    -fx-border-color: #bfdbfe;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+}
+
+.primary-button {
+    -fx-background-color: #0f172a;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 24;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-pref-width: 260;
+}
+
+.primary-button:hover {
+    -fx-background-color: #1e293b;
+}
+
+.link-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #2563eb;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+    -fx-padding: 15 0 0 0;
+}
+
+.link-button:hover {
+    -fx-underline: true;
+}
+
+.error-label {
+    -fx-text-fill: #ef4444;
+    -fx-font-size: 13px;
+}

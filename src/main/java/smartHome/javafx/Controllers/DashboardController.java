@@ -16,15 +16,17 @@ public class DashboardController {
     public DashboardController() {
         root = new VBox(25);
         root.setAlignment(Pos.TOP_CENTER);
-        root.setPadding(new Insets(40));
-        root.setStyle("-fx-background-color: linear-gradient(to bottom right, #f8fafc, #f1f5f9);");
+        // Padding moved to CSS or kept here for layout logic, kept in CSS for consistency if possible, but padding is often structural. 
+        // CSS padding does distinct things for Regions. Let's rely on CSS as much as possible.
+        // root.setPadding(new Insets(40)); 
+        root.getStyleClass().add("root-dashboard");
 
         // Header
         HBox header = new HBox(20);
         header.setAlignment(Pos.CENTER_RIGHT);
         
         Button logoutBtn = new Button("Logout");
-        logoutBtn.setStyle("-fx-background-color: white; -fx-text-fill: #64748b; -fx-font-weight: bold; -fx-padding: 8 20; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 5, 0, 0, 2); -fx-cursor: hand;");
+        logoutBtn.getStyleClass().add("logout-button");
         logoutBtn.setOnAction(e -> SceneManager.switchScene("Login"));
         
         header.getChildren().add(logoutBtn);
@@ -34,9 +36,11 @@ public class DashboardController {
         VBox titleBox = new VBox(8);
         titleBox.setAlignment(Pos.CENTER);
         Label title = new Label("Smart Home Dashboard");
-        title.setStyle("-fx-font-size: 32px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+        title.getStyleClass().add("dashboard-title");
+        
         Label subtitle = new Label("Everything is running smoothly today.");
-        subtitle.setStyle("-fx-font-size: 15px; -fx-text-fill: #64748b;");
+        subtitle.getStyleClass().add("dashboard-subtitle");
+        
         titleBox.getChildren().addAll(title, subtitle);
 
         // Modules Container
@@ -59,6 +63,9 @@ public class DashboardController {
         modulesBox.getChildren().addAll(childModule, homeModule, securityModule, reportModule);
 
         root.getChildren().addAll(header, titleBox, modulesBox);
+        
+        // Load CSS
+        root.getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dashboard.css").toExternalForm());
     }
 
     public VBox getView() {
@@ -70,22 +77,24 @@ public class DashboardController {
         card.setPrefWidth(250);
         card.setPrefHeight(280);
         card.setAlignment(Pos.CENTER);
-        card.setPadding(new Insets(30));
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 24; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 20, 0, 0, 10); -fx-cursor: hand;");
+        // Padding for card content
+        // card.setPadding(new Insets(30)); // Moved to CSS
+        
+        card.getStyleClass().add("module-card");
 
         StackPane iconPane = new StackPane();
         Circle bg = new Circle(35, Color.web(colorHex));
         Label iconLbl = new Label(icon);
-        iconLbl.setStyle("-fx-font-size: 30px;");
+        iconLbl.getStyleClass().add("module-icon-text");
         iconPane.getChildren().addAll(bg, iconLbl);
 
         VBox info = new VBox(6);
         info.setAlignment(Pos.CENTER);
         Label titleLbl = new Label(title);
-        titleLbl.setStyle("-fx-font-size: 18px; -fx-font-weight: 800; -fx-text-fill: #1e293b;");
+        titleLbl.getStyleClass().add("module-title");
         
         Label descLbl = new Label(desc);
-        descLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #64748b; -fx-text-alignment: center;");
+        descLbl.getStyleClass().add("module-desc");
         descLbl.setWrapText(true);
         info.getChildren().addAll(titleLbl, descLbl);
 
@@ -93,9 +102,13 @@ public class DashboardController {
 
         card.setOnMouseClicked(e -> SceneManager.switchScene(targetScene));
 
-        // Hover Effect
-        card.setOnMouseEntered(e -> card.setStyle("-fx-background-color: white; -fx-background-radius: 24; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 30, 0, 0, 15); -fx-cursor: hand; -fx-translate-y: -5;"));
-        card.setOnMouseExited(e -> card.setStyle("-fx-background-color: white; -fx-background-radius: 24; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 20, 0, 0, 10); -fx-cursor: hand; -fx-translate-y: 0;"));
+        // Hover Effect - Handled by CSS :hover pseudo-class 
+        // Note: Translation effect in CSS might not work on VBox without JavaFX 8u40+ or specific CSS tweaks.
+        // Standard JavaFX CSS :hover supports scale/translate but let's keep it simple.
+        // If simple CSS :hover doesn't work for layout changes (translate), we can keep the listeners but remove the inline style string construction.
+        // However, CSS is cleaner. "translate-y" is standard in newer JavaFX. 
+        // If it fails, we fall back to listeners toggling a class.
+        // For now, relying on CSS.
 
         return card;
     }

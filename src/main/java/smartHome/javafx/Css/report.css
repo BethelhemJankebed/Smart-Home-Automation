@@ -1,0 +1,60 @@
+.root-report {
+    -fx-background-color: #f3f4f6;
+    -fx-padding: 20;
+}
+
+.header-container {
+    -fx-alignment: center-left;
+}
+
+.back-button {
+    /* Standard button styling if needed, or default JavaFX */
+    -fx-cursor: hand;
+}
+
+.report-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2937;
+}
+
+.report-tab-pane {
+    -fx-background-color: transparent;
+}
+
+.report-tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: transparent;
+}
+
+.log-view-box {
+    -fx-padding: 15;
+}
+
+.analytics-box {
+    -fx-padding: 15;
+    -fx-alignment: center;
+}
+
+.log-text-area {
+    -fx-font-family: 'Consolas', monospace;
+    -fx-control-inner-background: #ffffff;
+    -fx-text-fill: #374151;
+}
+
+.period-selector {
+    -fx-alignment: center;
+}
+
+.period-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #4b5563;
+}
+
+.toggle-button {
+    -fx-cursor: hand;
+}
+
+.toggle-button:selected {
+    -fx-background-color: #3b82f6;
+    -fx-text-fill: white;
+}
