@@ -25,16 +25,8 @@ public class DatabaseManager {
         try (Connection conn = connect(); Statement stmt = conn.createStatement()) { stmt.execute(sql); } catch (SQLException e) { e.printStackTrace(); }
     }
     
-    // Call this in static block
-    static {
-        createUsersTable();
-        createRoomsTable();
-        createDevicesTable();
-        createEventsTable();
-        createLocationsTable();
-        createAlertsTable();
-        createFaceTable();
-    }
+    // Tables are created via static block below
+    static {} 
 
     public static void updateLocation(String person, int roomId) {
         String sql = "INSERT OR REPLACE INTO locations(person, room_id, timestamp) VALUES(?,?,?)";
@@ -126,6 +118,42 @@ public class DatabaseManager {
             try {
                 stmt.execute("ALTER TABLE devices ADD COLUMN linked_param TEXT;");
             } catch (SQLException e) { /* ignore */ }
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    private static void createSystemLogsTable() {
+        String sql = "CREATE TABLE IF NOT EXISTS system_logs (" +
+                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                     "timestamp TEXT," +
+                     "module TEXT," +
+                     "event TEXT," +
+                     "level TEXT" +
+                     ");";
+        try (Connection conn = connect(); Statement stmt = conn.createStatement()) { 
+            stmt.execute(sql); 
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    // Call this in static block
+    static {
+        createUsersTable();
+        createRoomsTable();
+        createDevicesTable();
+        createEventsTable();
+        createLocationsTable();
+        createAlertsTable();
+        createFaceTable();
+        createSystemLogsTable();
+    }
+
+    public static void logSystemActivity(String module, String event, String level) {
+        String sql = "INSERT INTO system_logs(timestamp, module, event, level) VALUES(?,?,?,?)";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            ps.setString(2, module);
+            ps.setString(3, event);
+            ps.setString(4, level);
+            ps.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
     }
 

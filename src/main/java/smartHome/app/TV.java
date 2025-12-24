@@ -1,7 +1,6 @@
 package smartHome.app;
 
 
-
 public class TV extends Device {
     public TV(String id, String name) {
         super(id, name, "TV");

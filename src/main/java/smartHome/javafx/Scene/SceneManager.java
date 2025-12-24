@@ -17,7 +17,7 @@ public class SceneManager {
         stage.setTitle("Smart Home");
         try {
             // Load application icon
-            javafx.scene.image.Image icon = new javafx.scene.image.Image(SceneManager.class.getResourceAsStream("/smartHome/javafx/images/app_icon.png"));
+            javafx.scene.image.Image icon = new javafx.scene.image.Image(SceneManager.class.getResourceAsStream("/smartHome/javafx/images/app_Iconnew.png"));
             stage.getIcons().add(icon);
         } catch (Exception e) {
             System.err.println("Failed to load app icon: " + e.getMessage());

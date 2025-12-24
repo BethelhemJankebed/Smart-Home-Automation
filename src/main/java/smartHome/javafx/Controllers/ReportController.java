@@ -1,14 +1,9 @@
 package smartHome.javafx.Controllers;
 
 
-import javafx.scene.chart.BarChart;
-import javafx.scene.chart.CategoryAxis;
-import javafx.scene.chart.NumberAxis;
-import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import smartHome.app.ReportManager;
-import smartHome.db.DatabaseManager;
 import smartHome.javafx.Scene.SceneManager;
 import java.util.List;
 import java.util.Map;
@@ -57,22 +52,31 @@ public class ReportController {
         root.getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/report.css").toExternalForm());
     }
 
+    private ComboBox<String> periodCombo;
+    private javafx.scene.chart.PieChart pieChart;
+
     private VBox createLogView() {
         VBox box = new VBox(10);
         box.getStyleClass().add("log-view-box");
         
-        Button refresh = new Button("Refresh Logs");
-        refresh.setOnAction(e -> showAllEvents());
+        HBox top = new HBox(10);
+        periodCombo = new ComboBox<>();
+        periodCombo.getItems().addAll("Daily", "Weekly", "Monthly", "Yearly", "All Time");
+        periodCombo.setValue("Daily");
+        periodCombo.setOnAction(e -> refreshAll());
+
+        Button refresh = new Button("Refresh");
+        refresh.setOnAction(e -> refreshAll());
         
+        top.getChildren().addAll(new Label("Filter:"), periodCombo, refresh);
+
         reportArea = new TextArea();
         reportArea.setEditable(false);
         reportArea.setPrefHeight(400);
         reportArea.getStyleClass().add("log-text-area");
         
-        box.getChildren().addAll(refresh, reportArea);
+        box.getChildren().addAll(top, reportArea);
         
-        // Initial load
-        showAllEvents();
         return box;
     }
 
@@ -80,73 +84,47 @@ public class ReportController {
         VBox box = new VBox(15);
         box.getStyleClass().add("analytics-box");
         
-        HBox periodSelector = new HBox(10);
-        periodSelector.getStyleClass().add("period-selector");
-        ToggleGroup group = new ToggleGroup();
+        Label chartTitle = new Label("Activity Distribution by Module");
+        chartTitle.getStyleClass().add("chart-title-label");
+
+        pieChart = new javafx.scene.chart.PieChart();
+        pieChart.setClockwise(true);
+        pieChart.setLabelsVisible(true);
         
-        ToggleButton btnDaily = new ToggleButton("Daily");
-        btnDaily.setToggleGroup(group);
-        btnDaily.setSelected(true);
-        
-        ToggleButton btnWeekly = new ToggleButton("Weekly");
-        btnWeekly.setToggleGroup(group);
-        
-        ToggleButton btnMonthly = new ToggleButton("Monthly");
-        btnMonthly.setToggleGroup(group);
-        
-        Label pLabel = new Label("Period:");
-        pLabel.getStyleClass().add("period-label");
-        
-        periodSelector.getChildren().addAll(pLabel, btnDaily, btnWeekly, btnMonthly);
-        
-        // Chart
-        CategoryAxis xAxis = new CategoryAxis();
-        NumberAxis yAxis = new NumberAxis();
-        xAxis.setLabel("Event Type");
-        yAxis.setLabel("Count");
-        
-        BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
-        barChart.setTitle("System Events");
-        barChart.setLegendVisible(false);
-        
-        Runnable updateChart = () -> {
-            String period = "Daily";
-            if (btnWeekly.isSelected()) period = "Weekly";
-            if (btnMonthly.isSelected()) period = "Monthly";
-            
-            barChart.getData().clear();
-            XYChart.Series<String, Number> series = new XYChart.Series<>();
-            
-            Map<String, Integer> data = DatabaseManager.getEventCounts(period);
-            for (Map.Entry<String, Integer> entry : data.entrySet()) {
-                series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
-            }
-            
-            barChart.getData().add(series);
-        };
-        
-        btnDaily.setOnAction(e -> updateChart.run());
-        btnWeekly.setOnAction(e -> updateChart.run());
-        btnMonthly.setOnAction(e -> updateChart.run());
-        
-        // Initial load
-        updateChart.run();
-        
-        box.getChildren().addAll(periodSelector, barChart);
+        box.getChildren().addAll(chartTitle, pieChart);
         return box;
     }
 
-    public VBox getView() {
-        return root;
+    private void refreshAll() {
+        updateLogText();
+        updateChart();
     }
 
-    private void showAllEvents() {
-        List<String> events = reportManager.generateAllEventsReport();
+    private void updateLogText() {
+        String period = periodCombo.getValue();
+        List<String> logs = reportManager.getSystemLogs(period);
         StringBuilder sb = new StringBuilder();
-        sb.append("--- All Events ---\n");
-        for(String e : events) {
-            sb.append(e).append("\n");
+        sb.append(String.format("--- System Activity (%s) ---\n", period));
+        sb.append("TIME  | MODULE | EVENT\n");
+        sb.append("----------------------------\n");
+        for(String log : logs) {
+            sb.append(log).append("\n");
         }
         reportArea.setText(sb.toString());
+    }
+
+    private void updateChart() {
+        String period = periodCombo.getValue();
+        Map<String, Integer> dist = reportManager.getModuleActivityDistribution(period);
+        
+        pieChart.getData().clear();
+        for (Map.Entry<String, Integer> entry : dist.entrySet()) {
+            pieChart.getData().add(new javafx.scene.chart.PieChart.Data(entry.getKey(), entry.getValue()));
+        }
+    }
+
+    public VBox getView() {
+        refreshAll(); // Ensure data is loaded
+        return root;
     }
 }
