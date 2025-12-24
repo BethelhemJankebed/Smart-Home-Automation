@@ -14,6 +14,6 @@ public class ControlHomeAppliancesScene {
         // If not, I'll need to refactor it or use its root if exposed.
         // Assuming I'll check/fix it in the next step if needed. 
         // For now, let's assume I will fix the controller to expose logic.
-        return new Scene(root, 800, 600);
+        return new Scene(root, 1000, 600);
     }
 }

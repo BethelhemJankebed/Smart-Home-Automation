@@ -31,7 +31,7 @@ public class SceneManager {
     public static void switchScene(String name, Object data) {
         sceneData = data;
 
-        Scene scene = switch (name) {
+        Scene newScene = switch (name) {
             case "Login" -> LoginScene.create();
             case "Signup" -> SignupScene.create();
             case "ControlRoomDevice" -> ControlRoomDeviceScene.create();
@@ -43,7 +43,21 @@ public class SceneManager {
             default -> throw new IllegalArgumentException("Unknown scene: " + name);
         };
 
-        stage.setScene(scene);
+        if (stage.getScene() == null) {
+            stage.setScene(newScene);
+        } else {
+            // ROBUST ROOT-SWAP: Reuse existing scene to prevent window state loss (resizing/un-maximization)
+            Scene currentScene = stage.getScene();
+            
+            // 1. Detach root from the newly created scene (Node cannot belong to two scenes)
+            javafx.scene.Parent root = newScene.getRoot();
+            newScene.setRoot(new javafx.scene.layout.Region()); // Set dummy root to detach
+            
+            // 2. Update existing scene
+            currentScene.setRoot(root);
+            currentScene.getStylesheets().setAll(newScene.getStylesheets());
+        }
+
         if (!stage.isShowing()) {
             stage.show();
         }

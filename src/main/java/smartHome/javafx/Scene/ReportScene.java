@@ -8,6 +8,6 @@ public class ReportScene {
     public static Scene create() {
         ReportController controller = new ReportController();
         VBox root = controller.getView();
-        return new Scene(root, 800, 600);
+        return new Scene(root, 1000, 600);
     }
 }

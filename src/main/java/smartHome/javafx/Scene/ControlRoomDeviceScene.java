@@ -9,7 +9,7 @@ public class ControlRoomDeviceScene {
         ControlRoomDeviceController controller = new ControlRoomDeviceController();
         VBox root = controller.getView();
         
-        Scene scene = new Scene(root, 800, 600);
+        Scene scene = new Scene(root, 1000, 600);
         return scene;
     }
 }

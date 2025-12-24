@@ -8,6 +8,6 @@ public class DashboardScene {
     public static Scene create() {
         DashboardController controller = new DashboardController();
         VBox root = controller.getView();
-        return new Scene(root, 900, 600);
+        return new Scene(root, 1000, 600);
     }
 }

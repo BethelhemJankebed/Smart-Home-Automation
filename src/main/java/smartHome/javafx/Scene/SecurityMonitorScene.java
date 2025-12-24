@@ -8,6 +8,6 @@ public class SecurityMonitorScene {
     public static Scene create() {
         SecurityMonitorController controller = new SecurityMonitorController();
         VBox root = controller.getView();
-        return new Scene(root, 900, 600);
+        return new Scene(root, 1000, 600);
     }
 }

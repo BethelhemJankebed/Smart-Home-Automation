@@ -8,6 +8,6 @@ public class MonitorChildScene {
     public static Scene create() {
         ChildMonitorController controller = new ChildMonitorController();
         VBox root = controller.getView();
-        return new Scene(root, 900, 600);
+        return new Scene(root, 1000, 600);
     }
 }
