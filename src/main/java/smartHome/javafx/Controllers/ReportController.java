@@ -1,6 +1,6 @@
 package smartHome.javafx.Controllers;
 
-import javafx.geometry.Pos;
+
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;

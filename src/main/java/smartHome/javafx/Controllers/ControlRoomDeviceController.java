@@ -245,7 +245,28 @@ public class ControlRoomDeviceController {
         Button deleteBtn = new Button("🗑");
         deleteBtn.getStyleClass().add("delete-btn");
         deleteBtn.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Delete " + d.getName() + "?", ButtonType.YES, ButtonType.NO);
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Delete Device");
+            alert.setHeaderText(null);
+            
+            VBox content = new VBox(10);
+            content.setAlignment(Pos.CENTER_LEFT);
+            Label title = new Label("Confirm Deletion");
+            title.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+            Label msg = new Label("Are you sure you want to delete " + d.getName() + "?");
+            msg.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+            content.getChildren().addAll(title, msg);
+            
+            Label deleteIcon = new Label("🗑");
+            deleteIcon.setStyle("-fx-font-size: 36px; -fx-text-fill: #ef4444;");
+            
+            alert.getDialogPane().setContent(content);
+            alert.setGraphic(deleteIcon);
+            alert.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
+            
+            alert.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+            alert.getDialogPane().getStyleClass().add("dialog-pane");
+
             alert.showAndWait().ifPresent(response -> {
                 if (response == ButtonType.YES) {
                     DatabaseManager.deleteDevice(d.getId());
@@ -299,7 +320,26 @@ public class ControlRoomDeviceController {
         }
         
         if (cameras.isEmpty()) {
-            Alert a = new Alert(Alert.AlertType.WARNING, "No cameras found in this room to link.");
+            Alert a = new Alert(Alert.AlertType.WARNING);
+            a.setTitle("No Cameras");
+            a.setHeaderText(null);
+            
+            VBox c = new VBox(10);
+            c.setAlignment(Pos.CENTER_LEFT);
+            Label t = new Label("Action Unavailable");
+            t.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+            Label m = new Label("No cameras found in this room to link.");
+            m.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+            c.getChildren().addAll(t, m);
+            
+            Label ic = new Label("⚠️");
+            ic.setStyle("-fx-font-size: 36px; -fx-text-fill: #f59e0b;");
+            
+            a.getDialogPane().setContent(c);
+            a.setGraphic(ic);
+            a.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+            a.getDialogPane().getStyleClass().add("dialog-pane");
+            
             a.show();
             return;
         }
@@ -315,11 +355,44 @@ public class ControlRoomDeviceController {
             // Link
             Camera target = cameras.get(0); // Default to first
             if (cameras.size() > 1) {
-                // ChoiceDialog if multiple
-                ChoiceDialog<Camera> dialog = new ChoiceDialog<>(cameras.get(0), cameras);
+                // ChoiceDialog replacement
+                Dialog<Camera> dialog = new Dialog<>();
                 dialog.setTitle("Select Camera");
-                dialog.setHeaderText("Link " + light.getName() + " to which camera?");
-                dialog.setContentText("Camera:");
+                dialog.setHeaderText(null);
+                
+                VBox camContent = new VBox(10);
+                camContent.setAlignment(Pos.CENTER_LEFT);
+                
+                Label cTitle = new Label("Link Camera");
+                cTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+                Label cMsg = new Label("Select a camera to link to " + light.getName());
+                cMsg.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+                
+                ComboBox<Camera> camCombo = new ComboBox<>();
+                camCombo.getItems().addAll(cameras);
+                camCombo.setValue(cameras.get(0));
+                camCombo.setMaxWidth(Double.MAX_VALUE);
+                
+                // Converter for ComboBox display
+                camCombo.setConverter(new javafx.util.StringConverter<Camera>() {
+                    @Override public String toString(Camera c) { return c != null ? c.getName() : ""; }
+                    @Override public Camera fromString(String s) { return null; }
+                });
+                
+                camContent.getChildren().addAll(cTitle, cMsg, camCombo);
+                
+                Label camIcon = new Label("📹");
+                camIcon.setStyle("-fx-font-size: 36px; -fx-text-fill: #3b82f6;");
+                
+                dialog.getDialogPane().setContent(camContent);
+                dialog.setGraphic(camIcon);
+                dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+                
+                dialog.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+                dialog.getDialogPane().getStyleClass().add("dialog-pane");
+                
+                dialog.setResultConverter(b -> b == ButtonType.OK ? camCombo.getValue() : null);
+
                 java.util.Optional<Camera> result = dialog.showAndWait();
                 if (result.isPresent()) target = result.get(); else return;
             }
@@ -338,15 +411,24 @@ public class ControlRoomDeviceController {
 
         Dialog<Device> dialog = new Dialog<>();
         dialog.setTitle("Add Device");
-        dialog.setHeaderText("Add a new device to " + currentRoom.getName());
+        dialog.setHeaderText(null);
 
-        ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+        // Header Content
+        VBox mainBox = new VBox(20);
+        
+        VBox headerContent = new VBox(5);
+        headerContent.setAlignment(Pos.CENTER_LEFT);
+        Label title = new Label("Add New Device");
+        title.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+        Label subtitle = new Label("Add a new device to " + currentRoom.getName());
+        subtitle.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+        headerContent.getChildren().addAll(title, subtitle);
 
+        // Form Content
         GridPane grid = new GridPane();
         grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
+        grid.setVgap(15);
+        grid.setPadding(new Insets(10, 0, 0, 0));
 
         TextField nameField = new TextField();
         nameField.setPromptText("Device Name");
@@ -367,20 +449,39 @@ public class ControlRoomDeviceController {
             sourceField.setVisible(isCam);
         });
 
-        grid.add(new Label("Name:"), 0, 0);
-        grid.add(nameField, 1, 0);
-        grid.add(new Label("Type:"), 0, 1);
-        grid.add(typeCombo, 1, 1);
-        grid.add(sourceLabel, 0, 2);
-        grid.add(sourceField, 1, 2);
+        // Styling labels for form
+        Label l1 = new Label("Name:"); l1.setStyle("-fx-text-fill: #475569; -fx-font-weight: bold;");
+        Label l2 = new Label("Type:"); l2.setStyle("-fx-text-fill: #475569; -fx-font-weight: bold;");
+        Label l3 = new Label("Source:"); l3.setStyle("-fx-text-fill: #475569; -fx-font-weight: bold;");
+        l3.visibleProperty().bind(sourceLabel.visibleProperty()); // Bind visibility
 
-        dialog.getDialogPane().setContent(grid);
+        grid.add(l1, 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(l2, 0, 1);
+        grid.add(typeCombo, 1, 1);
+        grid.add(l3, 0, 2);
+        grid.add(sourceField, 1, 2);
+        
+        mainBox.getChildren().addAll(headerContent, grid);
+
+        ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+        dialog.getDialogPane().setContent(mainBox);
+        
+        // Icon
+        Label icon = new Label("✨");
+        icon.setStyle("-fx-font-size: 36px; -fx-text-fill: #f59e0b;");
+        dialog.setGraphic(icon);
+
+        // Styling
+        dialog.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("dialog-pane");
 
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == addButtonType) {
                 String name = nameField.getText();
                 String type = typeCombo.getValue();
-                String id = "D" + System.currentTimeMillis(); // Simple ID generation
+                String id = "D" + System.currentTimeMillis();
                 switch(type) {
                     case "Light": return new Light(id, name);
                     case "Fan": return new Fan(id, name);
@@ -405,10 +506,33 @@ public class ControlRoomDeviceController {
     }
 
     private void openEditCameraSourceDialog(Camera cam) {
-        TextInputDialog dialog = new TextInputDialog(cam.getStreamSource());
+        Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Camera Settings");
-        dialog.setHeaderText("Edit stream source for: " + cam.getName());
-        dialog.setContentText("Enter Camera Index (0, 1...) or Stream URL:");
+        dialog.setHeaderText(null);
+        
+        VBox content = new VBox(10);
+        content.setAlignment(Pos.CENTER_LEFT);
+        
+        Label title = new Label("Edit Stream Source");
+        title.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+        Label msg = new Label("Enter Camera Index (0, 1...) or Stream URL for: " + cam.getName());
+        msg.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+        
+        TextField input = new TextField(cam.getStreamSource());
+        
+        content.getChildren().addAll(title, msg, input);
+        
+        Label icon = new Label("⚙");
+        icon.setStyle("-fx-font-size: 36px; -fx-text-fill: #64748b;");
+        
+        dialog.getDialogPane().setContent(content);
+        dialog.setGraphic(icon);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        
+        dialog.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("dialog-pane");
+        
+        dialog.setResultConverter(b -> b == ButtonType.OK ? input.getText() : null);
 
         dialog.showAndWait().ifPresent(newSource -> {
             cam.setStreamSource(newSource);

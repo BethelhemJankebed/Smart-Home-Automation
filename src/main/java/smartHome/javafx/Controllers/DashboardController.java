@@ -27,7 +27,41 @@ public class DashboardController {
         
         Button logoutBtn = new Button("Logout");
         logoutBtn.getStyleClass().add("logout-button");
-        logoutBtn.setOnAction(e -> SceneManager.switchScene("Login"));
+        logoutBtn.setOnAction(e -> {
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Logout");
+            alert.setHeaderText(null); // Remove default header to control spacing & layout
+            
+            // Custom Content Node
+            VBox content = new VBox(10);
+            content.setAlignment(Pos.CENTER_LEFT);
+            
+            Label titleLbl = new Label("Confirm Logout");
+            titleLbl.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+            
+            Label msgLbl = new Label("Are you sure you want to log out?");
+            msgLbl.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+            
+            content.getChildren().addAll(titleLbl, msgLbl);
+            
+            // Custom Graphic on Left
+            Label iconLbl = new Label("❓");
+            iconLbl.setStyle("-fx-font-size: 36px; -fx-text-fill: #3b82f6;");
+            
+            alert.getDialogPane().setContent(content);
+            alert.setGraphic(iconLbl);
+            
+            // Look & Feel
+            javafx.scene.control.DialogPane dialogPane = alert.getDialogPane();
+            dialogPane.getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+            dialogPane.getStyleClass().add("dialog-pane");
+            
+            alert.showAndWait().ifPresent(response -> {
+                if (response == javafx.scene.control.ButtonType.OK) {
+                    SceneManager.switchScene("Login");
+                }
+            });
+        });
         
         header.getChildren().add(logoutBtn);
         header.setMaxWidth(1000);

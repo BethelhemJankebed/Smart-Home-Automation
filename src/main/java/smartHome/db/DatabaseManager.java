@@ -576,6 +576,15 @@ public class DatabaseManager {
         } catch (SQLException e) { e.printStackTrace(); }
         return data;
     }
+    public static void deleteRoom(int roomId) {
+        String sql = "DELETE FROM rooms WHERE id = ?";
+        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roomId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 }
 
 

@@ -185,10 +185,23 @@ public class SecurityMonitorController {
     private void handleManageFaces() {
         Dialog<Void> dialog = new Dialog<>();
         dialog.setTitle("Manage Registered Faces");
-        dialog.setHeaderText("List of all registered people");
+        dialog.setHeaderText(null);
+
+        // Header
+        VBox mainLayout = new VBox(15);
+        
+        VBox headerContent = new VBox(5);
+        headerContent.setAlignment(Pos.CENTER_LEFT);
+        Label title = new Label("Registered Faces");
+        title.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+        Label subtitle = new Label("List of all registered people");
+        subtitle.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+        headerContent.getChildren().addAll(title, subtitle);
+        
+        mainLayout.getChildren().add(headerContent);
 
         VBox content = new VBox(15);
-        content.setPadding(new Insets(20));
+        content.setPadding(new Insets(10, 0, 10, 0));
         content.setPrefWidth(400);
 
         List<String[]> faces = DatabaseManager.getAllRegisteredFaces();
@@ -212,7 +225,28 @@ public class SecurityMonitorController {
                 Button delBtn = new Button("Delete");
                 delBtn.getStyleClass().add("face-delete-btn");
                 delBtn.setOnAction(e -> {
-                    Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Delete " + face[0] + "?", ButtonType.YES, ButtonType.NO);
+                    Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+                    confirm.setTitle("Delete Face");
+                    confirm.setHeaderText(null);
+                    
+                    VBox dContent = new VBox(10);
+                    dContent.setAlignment(Pos.CENTER_LEFT);
+                    Label dTitle = new Label("Confirm Deletion");
+                    dTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+                    Label dMsg = new Label("Delete " + face[0] + "?");
+                    dMsg.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+                    dContent.getChildren().addAll(dTitle, dMsg);
+                    
+                    Label dIcon = new Label("🗑");
+                    dIcon.setStyle("-fx-font-size: 36px; -fx-text-fill: #ef4444;");
+                    
+                    confirm.getDialogPane().setContent(dContent);
+                    confirm.setGraphic(dIcon);
+                    
+                    confirm.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+                    confirm.getDialogPane().getStyleClass().add("dialog-pane");
+                    confirm.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
+
                     confirm.showAndWait().ifPresent(response -> {
                         if (response == ButtonType.YES) {
                             // 1. Delete from database
@@ -221,7 +255,7 @@ public class SecurityMonitorController {
                             // 2. Reload embeddings
                             if (activeCamera != null) activeCamera.loadKnownFaces();
                             
-                            // 3. Refresh dialog content (naive way: close and reopen or just remove row)
+                            // 3. Refresh dialog content (naive way: remove row)
                             row.setVisible(false);
                             row.setManaged(false);
                             showAlert("Success", face[0] + " has been deleted.");
@@ -236,29 +270,83 @@ public class SecurityMonitorController {
 
         ScrollPane scroll = new ScrollPane(content);
         scroll.setFitToWidth(true);
-        scroll.setPrefHeight(400);
+        scroll.setPrefHeight(300);
         scroll.getStyleClass().add("face-list-scroll");
+        
+        mainLayout.getChildren().add(scroll);
 
         dialog.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/security.css").toExternalForm());
-        dialog.getDialogPane().setContent(scroll);
+        dialog.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("dialog-pane");
+        
+        dialog.getDialogPane().setContent(mainLayout);
+        
+        Label icon = new Label("👥");
+        icon.setStyle("-fx-font-size: 36px; -fx-text-fill: #3b82f6;");
+        dialog.setGraphic(icon);
+        
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         dialog.showAndWait();
     }
 
     private void handleRegisterFace() {
         // Step 1: Select Category
-        ChoiceDialog<String> categoryDialog = new ChoiceDialog<>("FAMILY", "CHILD", "FAMILY");
+        Dialog<String> categoryDialog = new Dialog<>();
         categoryDialog.setTitle("Register Face");
-        categoryDialog.setHeaderText("Category Selection");
-        categoryDialog.setContentText("Select category for this person:");
+        categoryDialog.setHeaderText(null);
         
+        VBox catContent = new VBox(10);
+        catContent.setAlignment(Pos.CENTER_LEFT);
+        Label catTitle = new Label("Category Selection");
+        catTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+        Label catMsg = new Label("Select category for this person:");
+        catMsg.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+        
+        ComboBox<String> catBox = new ComboBox<>();
+        catBox.getItems().addAll("FAMILY", "CHILD", "VISITOR"); // Added VISITOR as logical 3rd or strictly keep original logic? Original was "FAMILY", "CHILD", "FAMILY" (duplicate?). I'll use unique values. Original used varargs `new ChoiceDialog<>(d, "FAMILY", "CHILD", "FAMILY")` ?? Wait.
+        // Original: `new ChoiceDialog<>("FAMILY", "CHILD", "FAMILY")`. This implies default "FAMILY", then choices "CHILD", "FAMILY".
+        // I'll stick to unique logic: FAMILY, CHILD.
+        catBox.getItems().setAll("FAMILY", "CHILD");
+        catBox.setValue("FAMILY");
+        catBox.setMaxWidth(Double.MAX_VALUE);
+        
+        catContent.getChildren().addAll(catTitle, catMsg, catBox);
+        
+        Label catIcon = new Label("🏷");
+        catIcon.setStyle("-fx-font-size: 36px; -fx-text-fill: #3b82f6;");
+        
+        categoryDialog.getDialogPane().setContent(catContent);
+        categoryDialog.setGraphic(catIcon);
+        
+        categoryDialog.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+        categoryDialog.getDialogPane().getStyleClass().add("dialog-pane");
+        categoryDialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        
+        categoryDialog.setResultConverter(b -> b == ButtonType.OK ? catBox.getValue() : null);
+
         categoryDialog.showAndWait().ifPresent(category -> {
             String displayCategory = category.substring(0, 1).toUpperCase() + category.substring(1).toLowerCase();
             // Step 2: Select Source
             Alert choice = new Alert(Alert.AlertType.CONFIRMATION);
             choice.setTitle("Register Face - " + displayCategory);
-            choice.setHeaderText("Registration Source");
-            choice.setContentText("Select source for the face photo:");
+            choice.setHeaderText(null);
+            
+            VBox srcContent = new VBox(10);
+            srcContent.setAlignment(Pos.CENTER_LEFT);
+            Label srcTitle = new Label("Registration Source");
+            srcTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+            Label srcMsg = new Label("Select source for the face photo:");
+            srcMsg.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+            srcContent.getChildren().addAll(srcTitle, srcMsg);
+            
+            Label srcIcon = new Label("📸");
+            srcIcon.setStyle("-fx-font-size: 36px; -fx-text-fill: #8b5cf6;");
+
+            choice.getDialogPane().setContent(srcContent);
+            choice.setGraphic(srcIcon);
+            
+            choice.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+            choice.getDialogPane().getStyleClass().add("dialog-pane");
 
             ButtonType capBtn = new ButtonType("Capture Feed");
             ButtonType upBtn = new ButtonType("Upload File");
@@ -288,11 +376,32 @@ public class SecurityMonitorController {
             return;
         }
 
-        TextInputDialog dialog = new TextInputDialog();
+        Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Register New Face");
-        dialog.setHeaderText("New " + category + " Member");
-        dialog.setContentText("Enter name for this person:");
+        dialog.setHeaderText(null);
         
+        VBox content = new VBox(10);
+        content.setAlignment(Pos.CENTER_LEFT);
+        Label title = new Label("New " + category + " Member");
+        title.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+        Label msg = new Label("Enter name for this person:");
+        msg.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+        
+        TextField nameField = new TextField();
+        content.getChildren().addAll(title, msg, nameField);
+        
+        Label icon = new Label("👤");
+        icon.setStyle("-fx-font-size: 36px; -fx-text-fill: #3b82f6;");
+        
+        dialog.getDialogPane().setContent(content);
+        dialog.setGraphic(icon);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        
+        dialog.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("dialog-pane");
+        
+        dialog.setResultConverter(b -> b == ButtonType.OK ? nameField.getText() : null);
+
         dialog.showAndWait().ifPresent(name -> {
             // Convert Mat to byte[] for database storage
             MatOfByte mob = new MatOfByte();
@@ -314,10 +423,31 @@ public class SecurityMonitorController {
 
         File selectedFile = fileChooser.showOpenDialog(root.getScene().getWindow());
         if (selectedFile != null) {
-            TextInputDialog dialog = new TextInputDialog();
+            Dialog<String> dialog = new Dialog<>();
             dialog.setTitle("Register New Face");
-            dialog.setHeaderText("Upload Successful");
-            dialog.setContentText("Enter name for this " + category + " person:");
+            dialog.setHeaderText(null);
+            
+            VBox content = new VBox(10);
+            content.setAlignment(Pos.CENTER_LEFT);
+            Label title = new Label("Upload Successful");
+            title.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+            Label msg = new Label("Enter name for this " + category + " person:");
+            msg.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+            
+            TextField nameField = new TextField();
+            content.getChildren().addAll(title, msg, nameField);
+            
+            Label icon = new Label("📂");
+            icon.setStyle("-fx-font-size: 36px; -fx-text-fill: #3b82f6;");
+            
+            dialog.getDialogPane().setContent(content);
+            dialog.setGraphic(icon);
+            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            
+            dialog.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+            dialog.getDialogPane().getStyleClass().add("dialog-pane");
+            
+            dialog.setResultConverter(b -> b == ButtonType.OK ? nameField.getText() : null);
 
             dialog.showAndWait().ifPresent(name -> {
                 try {
@@ -336,7 +466,26 @@ public class SecurityMonitorController {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(content);
+        
+        VBox c = new VBox(10);
+        c.setAlignment(Pos.CENTER_LEFT);
+        Label t = new Label(title); // Use title as header
+        t.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+        Label m = new Label(content);
+        m.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+        m.setWrapText(true);
+        m.setMaxWidth(300);
+        c.getChildren().addAll(t, m);
+        
+        Label icon = new Label("ℹ️");
+        icon.setStyle("-fx-font-size: 36px; -fx-text-fill: #0ea5e9;");
+        
+        alert.getDialogPane().setContent(c);
+        alert.setGraphic(icon);
+        
+        alert.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+        alert.getDialogPane().getStyleClass().add("dialog-pane");
+        
         alert.showAndWait();
     }
 
@@ -424,7 +573,27 @@ public class SecurityMonitorController {
         Button deleteBtn = new Button("✕");
         deleteBtn.getStyleClass().add("alert-delete-btn");
         deleteBtn.setOnAction(e -> {
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Delete this notification?", ButtonType.YES, ButtonType.NO);
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Delete Notification");
+            confirm.setHeaderText(null);
+            
+            VBox c = new VBox(10);
+            c.setAlignment(Pos.CENTER_LEFT);
+            Label t = new Label("Delete Notification");
+            t.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+            Label m = new Label("Delete this notification?");
+            m.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+            c.getChildren().addAll(t, m);
+            
+            Label icon = new Label("🗑");
+            icon.setStyle("-fx-font-size: 36px; -fx-text-fill: #ef4444;");
+            
+            confirm.getDialogPane().setContent(c);
+            confirm.setGraphic(icon);
+            confirm.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+            confirm.getDialogPane().getStyleClass().add("dialog-pane");
+            confirm.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
+
             confirm.showAndWait().ifPresent(response -> {
                 if (response == ButtonType.YES) {
                     Room selected = roomSelector.getValue();

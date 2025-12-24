@@ -15,6 +15,13 @@ public class SceneManager {
     public static void init(Stage s) {
         stage = s;
         stage.setTitle("Smart Home");
+        try {
+            // Load application icon
+            javafx.scene.image.Image icon = new javafx.scene.image.Image(SceneManager.class.getResourceAsStream("/smartHome/javafx/images/app_icon.png"));
+            stage.getIcons().add(icon);
+        } catch (Exception e) {
+            System.err.println("Failed to load app icon: " + e.getMessage());
+        }
     }
 
     public static void switchScene(String name) {
@@ -37,6 +44,8 @@ public class SceneManager {
         };
 
         stage.setScene(scene);
-        stage.show();
+        if (!stage.isShowing()) {
+            stage.show();
+        }
     }
 }
