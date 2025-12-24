@@ -1,11 +1,15 @@
 .root-appliances {
     -fx-background-color: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+    background-color: #f8fafc;
     -fx-padding: 30;
+    padding: 30;
 }
 
 .header-container {
     -fx-background-color: white;
+    background-color: white;
     -fx-padding: 20;
+    padding: 20;
     -fx-background-radius: 15;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 4);
     -fx-alignment: center-left;
@@ -13,115 +17,161 @@
 
 .back-button {
     -fx-background-color: #f1f5f9;
+    background-color: #f1f5f9;
     -fx-text-fill: #64748b;
+    color: #64748b;
     -fx-font-size: 18px;
+    font-size: 18px;
     -fx-background-radius: 10;
     -fx-cursor: hand;
+    cursor: pointer;
 }
 
 .app-title {
     -fx-font-size: 26px;
+    font-size: 26px;
     -fx-font-weight: 800;
+    font-weight: 800;
     -fx-text-fill: #1e293b;
+    color: #1e293b;
 }
 
 .app-subtitle {
     -fx-text-fill: #64748b;
+    color: #64748b;
     -fx-font-size: 13px;
+    font-size: 13px;
 }
 
 .add-room-button {
     -fx-background-color: #3b82f6;
+    background-color: #3b82f6;
     -fx-text-fill: white;
+    color: white;
     -fx-font-weight: bold;
+    font-weight: bold;
     -fx-padding: 10 20;
+    padding: 10px 20px;
     -fx-background-radius: 10;
     -fx-cursor: hand;
+    cursor: pointer;
 }
 
 .scroll-pane {
     -fx-background-color: transparent;
+    background-color: transparent;
     -fx-background: transparent;
+    background: transparent;
 }
 
 .scroll-pane .viewport {
     -fx-background-color: transparent;
+    background-color: transparent;
 }
 
 .admin-report-card {
     -fx-background-color: linear-gradient(to bottom right, #eff6ff, #dbeafe);
+    background-color: #eff6ff;
     -fx-background-radius: 20;
     -fx-padding: 25;
+    padding: 25;
     -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.2), 20, 0, 0, 10);
     -fx-cursor: hand;
+    cursor: pointer;
     -fx-alignment: center;
 }
 
 .report-icon {
     -fx-font-size: 44px;
+    font-size: 44px;
 }
 
 .report-title {
     -fx-font-size: 16px;
+    font-size: 16px;
     -fx-font-weight: 800;
+    font-weight: 800;
     -fx-text-fill: #1e40af;
+    color: #1e40af;
 }
 
 .report-desc {
     -fx-text-fill: #60a5fa;
+    color: #60a5fa;
     -fx-font-size: 11px;
+    font-size: 11px;
 }
 
 /* Room Card */
 .room-card {
     -fx-background-color: white;
+    background-color: white;
     -fx-background-radius: 20;
     -fx-padding: 25;
+    padding: 25;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 20, 0, 0, 8);
     -fx-cursor: hand;
+    cursor: pointer;
 }
 
 .remove-button {
     -fx-background-color: transparent;
+    background-color: transparent;
     -fx-text-fill: #cbd5e1;
+    color: #cbd5e1;
     -fx-font-size: 20px;
+    font-size: 20px;
     -fx-font-weight: bold;
+    font-weight: bold;
+    -fx-cursor: hand;
+    cursor: pointer;
 }
 
 .room-title {
     -fx-font-size: 18px;
+    font-size: 18px;
     -fx-font-weight: 800;
+    font-weight: 800;
     -fx-text-fill: #1e293b;
+    color: #1e293b;
 }
 
 .status-on {
     -fx-text-fill: #10b981;
+    color: #10b981;
     -fx-font-weight: bold;
+    font-weight: bold;
     -fx-font-size: 12px;
+    font-size: 12px;
 }
 
 .status-off {
     -fx-text-fill: #94a3b8;
+    color: #94a3b8;
     -fx-font-weight: bold;
+    font-weight: bold;
     -fx-font-size: 12px;
+    font-size: 12px;
 }
 
 /* Dynamic Icon Colors */
 .icon-bg {
-    -fx-opacity: 0.12; /* Represents the '20' alpha in hex - approx 12% */
+    -fx-opacity: 0.12; 
+    opacity: 0.12;
 }
 
 /* Colors */
-.color-orange { -fx-fill: #f97316; -fx-text-fill: #f97316; }
-.color-indigo { -fx-fill: #6366f1; -fx-text-fill: #6366f1; }
-.color-cyan   { -fx-fill: #06b6d4; -fx-text-fill: #06b6d4; }
-.color-pink   { -fx-fill: #ec4899; -fx-text-fill: #ec4899; }
-.color-violet { -fx-fill: #8b5cf6; -fx-text-fill: #8b5cf6; }
-.color-yellow { -fx-fill: #eab308; -fx-text-fill: #eab308; }
-.color-red    { -fx-fill: #ef4444; -fx-text-fill: #ef4444; }
-.color-green  { -fx-fill: #22c55e; -fx-text-fill: #22c55e; }
-.color-blue   { -fx-fill: #3b82f6; -fx-text-fill: #3b82f6; }
+.color-orange { -fx-fill: #f97316; fill: #f97316; -fx-text-fill: #f97316; }
+.color-indigo { -fx-fill: #6366f1; fill: #6366f1; -fx-text-fill: #6366f1; }
+.color-cyan   { -fx-fill: #06b6d4; fill: #06b6d4; -fx-text-fill: #06b6d4; }
+.color-pink   { -fx-fill: #ec4899; fill: #ec4899; -fx-text-fill: #ec4899; }
+.color-violet { -fx-fill: #8b5cf6; fill: #8b5cf6; -fx-text-fill: #8b5cf6; }
+.color-yellow { -fx-fill: #eab308; fill: #eab308; -fx-text-fill: #eab308; }
+.color-red    { -fx-fill: #ef4444; fill: #ef4444; -fx-text-fill: #ef4444; color: #ef4444; }
+.color-green  { -fx-fill: #22c55e; fill: #22c55e; -fx-text-fill: #22c55e; color: #22c55e; }
+.color-blue   { -fx-fill: #3b82f6; fill: #3b82f6; -fx-text-fill: #3b82f6; color: #3b82f6; }
 
 .icon-label {
     -fx-font-size: 26px;
+    font-size: 26px;
 }
