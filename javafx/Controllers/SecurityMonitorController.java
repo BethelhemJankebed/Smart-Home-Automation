@@ -17,7 +17,6 @@ import smartHome.app.Device;
 import smartHome.app.Room;
 import smartHome.db.DatabaseManager;
 import smartHome.javafx.Scene.SceneManager;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -452,7 +451,7 @@ public class SecurityMonitorController {
         return card;
     }
 
-    private void cleanup() {
+    private void  cleanup() {
         if (timer != null) timer.stop();
         if (activeCamera != null) activeCamera.turnOff();
     }
