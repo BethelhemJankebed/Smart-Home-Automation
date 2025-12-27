@@ -298,7 +298,27 @@ public class ChildMonitorController {
         Button deleteBtn = new Button("✕");
         deleteBtn.getStyleClass().add("alert-delete-btn");
         deleteBtn.setOnAction(e -> {
-            javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION, "Delete this notification?", javafx.scene.control.ButtonType.YES, javafx.scene.control.ButtonType.NO);
+            javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Delete Notification");
+            confirm.setHeaderText(null);
+            
+            VBox c = new VBox(10);
+            c.setAlignment(Pos.CENTER_LEFT);
+            Label t = new Label("Delete Notification");
+            t.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #1e293b;");
+            Label m = new Label("Are you sure you want to delete this notification?");
+            m.setStyle("-fx-font-size: 14px; -fx-text-fill: #64748b;");
+            c.getChildren().addAll(t, m);
+            
+            Label dIcon = new Label("🗑");
+            dIcon.setStyle("-fx-font-size: 36px; -fx-text-fill: #ef4444;");
+            
+            confirm.getDialogPane().setContent(c);
+            confirm.setGraphic(dIcon);
+            confirm.getDialogPane().getStylesheets().add(getClass().getResource("/smartHome/javafx/Css/dialog.css").toExternalForm());
+            confirm.getDialogPane().getStyleClass().add("dialog-pane");
+            confirm.getButtonTypes().setAll(javafx.scene.control.ButtonType.YES, javafx.scene.control.ButtonType.NO);
+
             confirm.showAndWait().ifPresent(response -> {
                 if (response == javafx.scene.control.ButtonType.YES) {
                     try {

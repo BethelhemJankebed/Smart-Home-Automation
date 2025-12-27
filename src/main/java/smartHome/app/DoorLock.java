@@ -10,6 +10,8 @@ public class DoorLock extends Device {
         if (!state) {
             System.out.println(name + " is LOCKED"); 
             state = true;
+            smartHome.db.DatabaseManager.updateDeviceState(id, true);
+            fireStateChanged();
         }
     }
     @Override
@@ -17,6 +19,8 @@ public class DoorLock extends Device {
         if (state) {
             System.out.println(name + " is UNLOCKED"); 
             state = false;
+            smartHome.db.DatabaseManager.updateDeviceState(id, false);
+            fireStateChanged();
         }
     }
 }

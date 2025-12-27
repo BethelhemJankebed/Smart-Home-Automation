@@ -96,6 +96,7 @@ public class Camera extends Device {
                 
                 System.out.println(name + " is ACTIVE");
                 this.state = true;
+                DatabaseManager.updateDeviceState(id, true);
                 fireStateChanged();
                 isRunning = true;
                 
@@ -121,6 +122,7 @@ public class Camera extends Device {
     public void turnOff() {
         System.out.println(name + " is INACTIVE");
         this.state = false;
+        DatabaseManager.updateDeviceState(id, false);
         fireStateChanged();
         isRunning = false;
         if (VC != null && VC.isOpened()) {
