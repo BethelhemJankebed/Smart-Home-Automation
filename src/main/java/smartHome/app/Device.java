@@ -3,7 +3,7 @@ package smartHome.app;
 public abstract class Device {
     protected String id;
     protected String name;
-    protected boolean state; // true = ON, false = OFF
+    protected boolean state; 
     protected String type;
     private Runnable onStateChangedListener;
 

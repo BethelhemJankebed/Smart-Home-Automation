@@ -25,8 +25,6 @@ public class DatabaseManager {
         try (Connection conn = connect(); Statement stmt = conn.createStatement()) { stmt.execute(sql); } catch (SQLException e) { e.printStackTrace(); }
     }
     
-    // Tables are created via static block below
-    static {} 
 
     public static void updateLocation(String person, int roomId) {
         String sql = "INSERT OR REPLACE INTO locations(person, room_id, timestamp) VALUES(?,?,?)";
@@ -50,22 +48,6 @@ public class DatabaseManager {
         return null;
     }
 
-    public static String getOverallStatus(String type) {
-        // If type is "Shop", we might want to check devices in a room named "Shop" or with "Shop" in name
-        String sql = "SELECT count(*) FROM devices WHERE (type = ? OR name LIKE ?) AND state = 0"; 
-        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, type);
-            ps.setString(2, "%" + type + "%");
-            ResultSet rs = ps.executeQuery();
-            if (rs.next() && rs.getInt(1) > 0) return "Unlocked";
-        } catch (SQLException e) { e.printStackTrace(); }
-        return "Secure"; // Default to Secure if no issues
-    }
-
-    public static String getSecuritySummary() {
-        // Check for any recent Motion events or Warnings
-        return "Secure"; // Placeholder for complex logic
-    }
 
 
     public static Connection connect() throws SQLException {
@@ -517,19 +499,6 @@ public class DatabaseManager {
         return 0;
     }
 
-    public static List<String> getEvents(String filter) {
-        List<String> events = new ArrayList<>();
-        String sql = "SELECT * FROM events ORDER BY id DESC LIMIT 50";
-        try (Connection conn = connect(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                String event = "ID: " + rs.getInt("id") + ", Dev: " + rs.getString("device_id") + 
-                               ", Type: " + rs.getString("type") + ", Time: " + rs.getString("timestamp") +
-                               ", Details: " + rs.getString("details");
-                events.add(event);
-            }
-        } catch (SQLException e) { e.printStackTrace(); }
-        return events;
-    }
     
     public static void updateDeviceState(String deviceId, boolean state) {
         String sql = "UPDATE devices SET state = ? WHERE id = ?";
@@ -555,48 +524,6 @@ public class DatabaseManager {
         return faces;
     }
 
-    public static java.util.Map<String, Integer> getEventCounts(String period) {
-        java.util.Map<String, Integer> data = new java.util.HashMap<>();
-        String sql = "SELECT type, COUNT(*) as c FROM events WHERE timestamp LIKE ? GROUP BY type";
-        
-        String pattern = "%"; // Default all time
-        java.time.LocalDate now = java.time.LocalDate.now();
-        
-        if ("Daily".equalsIgnoreCase(period)) {
-            pattern = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")) + "%";
-        } else if ("Monthly".equalsIgnoreCase(period)) {
-            pattern = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")) + "%";
-        }
-
-        if ("Weekly".equalsIgnoreCase(period)) {
-            sql = "SELECT type, timestamp FROM events"; // Fetch all to filter
-             try (Connection conn = connect(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
-                java.time.LocalDateTime weekAgo = java.time.LocalDateTime.now().minusDays(7);
-                while(rs.next()) {
-                    String ts = rs.getString("timestamp");
-                    try {
-                        if (ts.length() > 8) { 
-                             java.time.LocalDateTime t = java.time.LocalDateTime.parse(ts, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                             if (t.isAfter(weekAgo)) {
-                                 String tType = rs.getString("type");
-                                 data.put(tType, data.getOrDefault(tType, 0) + 1);
-                             }
-                        }
-                    } catch (Exception e) {}
-                }
-            } catch (SQLException e) { e.printStackTrace(); }
-            return data;
-        }
-
-        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, pattern);
-            ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
-                data.put(rs.getString("type"), rs.getInt("c"));
-            }
-        } catch (SQLException e) { e.printStackTrace(); }
-        return data;
-    }
     public static void deleteRoom(int roomId) {
         String sql = "DELETE FROM rooms WHERE id = ?";
         try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {

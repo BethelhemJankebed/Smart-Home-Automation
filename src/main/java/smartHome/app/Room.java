@@ -15,7 +15,7 @@ public class Room {
     }
 
     public Room(int id, String name) {
-        this(id, name, "🏠"); // Default icon
+        this(id, name, "🏠"); 
     }
 
     public String getIcon() {

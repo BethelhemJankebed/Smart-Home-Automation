@@ -1,7 +1,15 @@
 package smartHome.app;
 
-import org.opencv.core.*;
 import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.Size;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.core.MatOfRect2d;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfInt;
+import org.opencv.core.Rect2d;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;//image processing blur threashold grayscale
 import org.opencv.objdetect.FaceDetectorYN;
@@ -10,11 +18,6 @@ import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
 import org.opencv.dnn.Dnn;//deep learning
 import org.opencv.dnn.Net;//deeplearning network object 
-import org.opencv.core.MatOfRect2d;
-import org.opencv.core.MatOfFloat;//image
-import org.opencv.core.MatOfInt;
-import org.opencv.core.Rect2d;
-import org.opencv.core.Scalar;
 
 import smartHome.db.DatabaseManager;
 
@@ -92,6 +95,8 @@ public class Camera extends Device {
                 Thread.sleep(500);
                 
                 System.out.println(name + " is ACTIVE");
+                this.state = true;
+                fireStateChanged();
                 isRunning = true;
                 
                 // Initialize YOLO
@@ -115,6 +120,8 @@ public class Camera extends Device {
     @Override
     public void turnOff() {
         System.out.println(name + " is INACTIVE");
+        this.state = false;
+        fireStateChanged();
         isRunning = false;
         if (VC != null && VC.isOpened()) {
             VC.release();

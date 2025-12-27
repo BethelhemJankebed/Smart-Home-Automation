@@ -120,8 +120,5 @@ public class ReportManager {
         return dist;
     }
 
-    public String generateSummaryReport() {
-        List<String> logs = getSystemLogs("Daily");
-        return "Total Activities Today: " + logs.size();
-    }
+
 }
