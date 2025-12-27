@@ -3,15 +3,15 @@ package smartHome.app;
 import org.opencv.core.*;
 import org.opencv.core.Core;
 import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
+import org.opencv.imgproc.Imgproc;//image processing blur threashold grayscale
 import org.opencv.objdetect.FaceDetectorYN;
 import org.opencv.objdetect.FaceRecognizerSF;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
-import org.opencv.dnn.Dnn;
-import org.opencv.dnn.Net;
+import org.opencv.dnn.Dnn;//deep learning
+import org.opencv.dnn.Net;//deeplearning network object 
 import org.opencv.core.MatOfRect2d;
-import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfFloat;//image
 import org.opencv.core.MatOfInt;
 import org.opencv.core.Rect2d;
 import org.opencv.core.Scalar;
@@ -25,8 +25,8 @@ import java.util.List;
 
 public class Camera extends Device {
 
-    private volatile boolean isRunning = false;
-    private VideoCapture VC;
+    private volatile boolean isRunning = false;//ensures it runs in separate threads
+    private VideoCapture VC;//camera capture object
 
     // COCO Dataset class names (80 classes, 0-indexed)
     private static final String[] COCO_CLASSES = {
@@ -63,16 +63,13 @@ public class Camera extends Device {
     public String getStreamSource() { return streamSource; }
     public void setStreamSource(String source) { this.streamSource = source; }
 
-    // ==========================================================
-    // TURN CAMERA ON
-    // ==========================================================
     @Override
     public void turnOn() {
         try {
             // Use OpenPNP to load the shared library automatically
             nu.pattern.OpenCV.loadShared();
             
-            // Try to parse source as int, else use as string URL
+            // Try to parse source as int, else use as string UL
             try {
                 int index = Integer.parseInt(streamSource);
                 VC = new VideoCapture(index, Videoio.CAP_DSHOW);
@@ -112,7 +109,6 @@ public class Camera extends Device {
         } catch (Throwable e) {
             System.out.println("⚠ Failed to initialize real Camera: " + e.getMessage());
             System.out.println("Falling back to MOCK mode.");
-            // e.printStackTrace(); 
         }
     }
 
@@ -124,20 +120,6 @@ public class Camera extends Device {
             VC.release();
         }
     }
-
-    // ==========================================================
-    // LINK LIGHT FOR MOTION SENSOR MODE
-    // ==========================================================
-
-
-
-    // ==========================================================
-    // LOAD KNOWN FACES
-    // ==========================================================
-
-
-
-    // MODULE WARNING SYSTEM
 
     private void giveImgWarningToModule(String module, Mat img){
 
@@ -151,7 +133,6 @@ public class Camera extends Device {
         this.linkedRoom = room;
     }
 
-    // LOADING FACES
 
     public void loadKnownFaces() {
         familyknownEmbeddings.clear();
@@ -210,7 +191,6 @@ public class Camera extends Device {
         return latestFrame;
     }
 
-    // MOTION SENSOR THREAD + AUTO LIGHT
 
     private void StartMotionDetection() {
         new Thread(() -> {
@@ -219,18 +199,18 @@ public class Camera extends Device {
                 return;
             }
 
-            Mat frame = new Mat();
-            Mat gray = new Mat();
-            Mat blur = new Mat();
-            Mat delta = new Mat();
+            Mat frame = new Mat();// current image 
+            Mat gray = new Mat();//grayscale image
+            Mat blur = new Mat();//blurred image to ignore smallfliker
+            Mat delta = new Mat();//difference between current and previous image
             Mat thresh = new Mat();
-            Mat background = new Mat();
+            Mat background = new Mat();//prvious picture 
 
             VC.read(frame);
             Imgproc.cvtColor(frame, background, Imgproc.COLOR_BGR2GRAY);
             Imgproc.GaussianBlur(background, background, new Size(21, 21), 0);
 
-            long lastMotion = System.currentTimeMillis();
+            long lastMotion = System.currentTimeMillis();// the last time i recorded a motion
 
             while (isRunning) {
                 try {
@@ -272,7 +252,7 @@ public class Camera extends Device {
 
                 // Auto turn off after 30 sec
                 long idle = System.currentTimeMillis() - lastMotion;
-                if (idle > 30000) {
+                if (idle > 5000) {
                      if (linkedRoom != null) {
                         for (Device device : linkedRoom.getDevices()) {
                             if (device instanceof Light light && light.isLinked()) {

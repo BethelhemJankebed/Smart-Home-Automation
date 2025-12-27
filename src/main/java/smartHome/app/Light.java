@@ -2,7 +2,6 @@ package smartHome.app;
 
 public class Light extends Device {
 
-    private boolean linkable = false;
     private Camera linkedCamera;
     private String linkedCameraId;
 
@@ -30,28 +29,12 @@ public class Light extends Device {
         }
     }
 
-    // ---- Linking logic ----
-    public boolean isLinkable() {
-        return linkable;
-    }
 
     public boolean isLinked() {
         return linkedCameraId != null && !linkedCameraId.isEmpty();
     }
 
-    public void makeLinkable() {
-        linkable = true;
-    }
 
-    public void makeUnlinkable() {
-        unlinkCamera();
-        linkable = false;
-    }
-
-    public void linkCamera(Camera cam) {
-        if (!linkable || cam == null) return;
-        linkedCamera = cam;
-    }
 
     public void unlinkCamera() {
         if (linkedCamera != null || linkedCameraId != null) {

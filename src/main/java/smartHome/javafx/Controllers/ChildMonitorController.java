@@ -19,7 +19,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
 
-import java.io.ByteArrayInputStream;
+import java.io.ByteArrayInputStream; //→ used to convert bytes from DB into Image
 
 import java.util.List;
 
@@ -222,8 +222,7 @@ public class ChildMonitorController {
         cameraSelector.getItems().addAll(cameras);
 
         if (!cameras.isEmpty()) {
-            // CRITICAL: Set activeCamera BEFORE setValue to prevent race condition
-            // where the event handler fires and sees a different camera
+           
             activeCamera = cameras.get(0);
             activeCamera.setLinkedRoom(room);
             activeCamera.turnOn();
@@ -241,7 +240,6 @@ public class ChildMonitorController {
             private long lastUpdate = 0;
             @Override
             public void handle(long now) {
-                // Update Camera Feed
                 if (activeCamera != null) {
                     Mat frame = activeCamera.getLatestFrame();
                     if (frame != null && !frame.empty()) {
@@ -355,8 +353,6 @@ public class ChildMonitorController {
             });
         }
     }
-
-    
 
     
     private void cleanup() {

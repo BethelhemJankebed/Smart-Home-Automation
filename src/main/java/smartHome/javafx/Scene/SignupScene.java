@@ -7,7 +7,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
 import javafx.scene.shape.Circle;
-import smartHome.db.DatabaseManager;
+import smartHome.javafx.Controllers.SignupController;
 
 public class SignupScene {
 
@@ -50,16 +50,16 @@ public class SignupScene {
         Button signup = new Button("Sign Up");
         signup.getStyleClass().add("primary-button");
 
-        signup.setOnAction(e -> {
-            if (DatabaseManager.registerUser(
-                    username.getText(),
-                    password.getText())) {
+        SignupController controller = new SignupController();
 
-                SceneManager.switchScene("Login");
-            } else {
-                error.setText("Username already exists");
-            }
-        });
+        signup.setOnAction(e -> {
+         controller.handleSignup(
+            username.getText(),
+            password.getText(),
+            error
+          );
+         });
+
 
         Button back = new Button("Already have an account? Login");
         back.getStyleClass().add("link-button");

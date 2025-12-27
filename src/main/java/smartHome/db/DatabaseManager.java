@@ -243,17 +243,7 @@ public class DatabaseManager {
         return faces;
     }
     
-    public static byte[] getFaceImage(String name) {
-        String sql = "SELECT image_data FROM registered_faces WHERE name = ?";
-        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, name);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return rs.getBytes("image_data");
-            }
-        } catch (SQLException e) { e.printStackTrace(); }
-        return null;
-    }
+
 
     public static void deleteFace(String name) {
         String sql = "DELETE FROM registered_faces WHERE name = ?";
@@ -263,17 +253,7 @@ public class DatabaseManager {
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    public static void saveAlert(int roomId, String type, String path, String message) {
-        String sql = "INSERT INTO alerts(room_id, timestamp, type, snapshot_path, message) VALUES(?,?,?,?,?)";
-        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, roomId);
-            ps.setString(2, java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-            ps.setString(3, type);
-            ps.setString(4, path);
-            ps.setString(5, message);
-            ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
-    }
+
     
     // New method for BLOB storage
     public static void saveAlertWithBlob(int roomId, String type, byte[] snapshotData, String message) {
@@ -320,17 +300,7 @@ public class DatabaseManager {
         return null;
     }
 
-    public static void deleteAlert(int roomId, String timestamp, String type) {
-        String sql = "DELETE FROM alerts WHERE room_id = ? AND timestamp = ? AND type = ?";
-        try (Connection conn = connect(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, roomId);
-            ps.setString(2, timestamp);
-            ps.setString(3, type);
-            ps.executeUpdate();
-        } catch (SQLException e) { 
-            System.err.println("DB_ERROR: deleteAlert (timestamp) failed: " + e.getMessage());
-        }
-    }
+
 
     public static void deleteAlertById(int id) {
         String sql = "DELETE FROM alerts WHERE id = ?";

@@ -7,19 +7,15 @@
 
 .login-card {
     -fx-background-color: white;
-    background-color: white;
     -fx-background-radius: 20;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 4);
     -fx-padding: 40;
-    padding: 40;
     -fx-max-width: 400;
-    max-width: 400px;
 }
 
 .icon-container {
     -fx-alignment: center;
     -fx-padding: 0 0 20 0;
-    padding: 0 0 20px 0;
 }
 
 .lock-icon-bg {
@@ -28,20 +24,14 @@
 
 .lock-icon-text {
     -fx-font-size: 32px;
-    font-size: 32px;
     -fx-fill: white;
-    fill: white;
 }
 
 .title {
     -fx-font-size: 24px;
-    font-size: 24px;
     -fx-font-weight: bold;
-    font-weight: bold;
     -fx-text-fill: #1e293b;
-    color: #1e293b;
     -fx-padding: 0 0 5 0;
-    padding: 0 0 5px 0;
 }
 
 .subtitle {
