@@ -54,11 +54,13 @@ Used to model Devices, Rooms, Home, and Controllers as reusable objects.
 * File logging (event/history recording)
 * Modular architecture for future expansion
 
+  
+---
+
 ### Project Scope & Limitation
 
 *This system is a simulation and can be accessed through mobile devices for monitoring and control.  
 However, it does not interact with real IoT hardware such as lights, doors, or other appliances, and all device operations are simulated.*
 
----
 
 
