@@ -55,3 +55,6 @@ Used to model Devices, Rooms, Home, and Controllers as reusable objects.
 * Modular architecture for future expansion
 
 ---
+
+### Project Scope & Limitation
+
